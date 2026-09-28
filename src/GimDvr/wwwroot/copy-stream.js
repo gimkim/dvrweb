@@ -48,10 +48,10 @@ function startCopyStream(video,id,onStatus){
      const data=await packets.next();lastData=Date.now();await update(()=>buffer.appendBuffer(data));
      if(!buffer.buffered.length)continue;
      const start=buffer.buffered.start(buffer.buffered.length-1),end=buffer.buffered.end(buffer.buffered.length-1);
-     if(!started){if(end-start<0.45)continue;video.currentTime=Math.max(start,end-0.5);started=true;}
+     if(!started){if(end-start<0.2)continue;video.currentTime=Math.max(start,end-0.2);started=true;}
      const lag=end-video.currentTime;
-     if(video.currentTime<start||lag>2){video.currentTime=Math.max(start,end-0.5);rebuffer=false;}
-     if(rebuffer&&end-video.currentTime<0.4)continue;
+     if(video.currentTime<start||lag>2){video.currentTime=Math.max(start,end-0.2);rebuffer=false;}
+     if(rebuffer&&end-video.currentTime<0.2)continue;
      rebuffer=false;video.playbackRate=end-video.currentTime>0.9?1.05:1;
      if(video.paused)video.play().catch(()=>{});
      onStatus('● LIVE · ส่งต่อภาพต่อเนื่อง ไม่ encode');

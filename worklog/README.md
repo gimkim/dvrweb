@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-41-08_overview-buffer-200ms.md](2026-09-28_18-41-08_overview-buffer-200ms.md) — overview startup/rebuffer/live target set to200ms; static deployment
+
 - [2026-09-28_18-39-26_buffer-latency-explanation.md](2026-09-28_18-39-26_buffer-latency-explanation.md) — current buffer settings and latency limits; explanation only, no deployment
 
 - [2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md](2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md) — repair empty H.264 initialization from in-band SPS/PPS, version1.6.1
