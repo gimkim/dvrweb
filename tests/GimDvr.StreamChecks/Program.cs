@@ -46,6 +46,19 @@ var simultaneous=await Run(new[]{"-hide_banner","-loglevel","error","-i",source}
 await FragmentCache.Pump(new MemoryStream(simultaneous),Path.Combine(root,"mux-copy"));
 var recorded=Directory.GetFiles(muxRecord,"*.mp4").Single();var recordHashes=Hashes(await Run("-v","error","-i",recorded,"-map","0:v:0","-f","framemd5","-"));
 Check(File.Exists(Path.Combine(muxHls,"index.m3u8"))&&FragmentCache.ReadIndex(Path.Combine(root,"mux-copy"))!.Fragments.Length>=60&&recordHashes.SequenceEqual(original),"one FFmpeg input simultaneously preserves recording, snapshot HLS and short copy fragments");
+// Arrival timestamps can bunch several packets together, leaving MSE gaps.
+var jitterSource=Path.Combine(root,"jitter.ts");
+await Run("-v","error","-f","lavfi","-i","testsrc2=size=320x180:rate=15","-t","4","-c:v","libx264","-preset","veryfast","-bf","0","-g","30",jitterSource);
+var jittered=Path.Combine(root,"jittered.ts");
+await File.WriteAllBytesAsync(jittered,await Run("-v","error","-i",jitterSource,"-c:v","copy","-bsf:v","setts=ts=STARTPTS+floor(N/5)*5/(15*TB)+mod(N\\,5)/(1000*TB)","-f","mpegts","pipe:1"));
+var regular=Path.Combine(root,"regular.mp4");
+await File.WriteAllBytesAsync(regular,await Run(new[]{"-v","error","-i",jittered}.Concat(FragmentCache.Arguments(150,15)).ToArray()));
+var regularHashes=Hashes(await Run("-v","error","-i",regular,"-fps_mode","passthrough","-f","framemd5","-"));
+var jitterHashes=Hashes(await Run("-v","error","-i",jitterSource,"-fps_mode","passthrough","-f","framemd5","-"));
+Check(regularHashes.Length==60&&regularHashes.SequenceEqual(jitterHashes),"bursty timestamps regularized in fMP4 without losing or changing decoded frames");
+var frameData=Encoding.UTF8.GetString(await Run("-v","error","-i",regular,"-fps_mode","passthrough","-enc_time_base","1:90000","-f","framemd5","-"));
+var pts=frameData.Split('\n').Where(x=>x.Length>0&&!x.StartsWith('#')).Select(x=>long.Parse(x.Split(',')[2])).ToArray();
+Check(pts.Zip(pts.Skip(1),(a,b)=>b-a).All(d=>d==6000),"fMP4 frame timestamps remain continuous at15fps across fragment boundaries");
 // Publish through the real HTTP handler with isolated store/runtime fixtures (no listening server).
 var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DataRoot"]=Path.Combine(root,"data"),["Dvr:MediaOwner"]="worker"}).Build();
 var paths=new Paths(config,new Env(root));var store=new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys"))));

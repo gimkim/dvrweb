@@ -134,7 +134,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         var rtcPort=((System.Net.IPEndPoint)rtcSocket.Client.LocalEndPoint!).Port;rtcSocket.Close();
         Add(WebRtcRelayArguments(rtcPort,paths.ArrivalClock(c.Id)?paths.WebRtcClockFps:0));
         Add(OverviewArguments(live));
-        var segmentMs=store.StreamSettings().SegmentMs;Add(FragmentCache.Arguments(segmentMs));
+        var segmentMs=store.StreamSettings().SegmentMs;Add(FragmentCache.Arguments(segmentMs,paths.ArrivalClock(c.Id)?paths.WebRtcClockFps:0));
         Manifest? manifest=null;
         if(c.RecordingEnabled)
         {

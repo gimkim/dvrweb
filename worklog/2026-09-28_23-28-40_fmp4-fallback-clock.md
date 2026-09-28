@@ -1,0 +1,9 @@
+# fMP4 fallback timestamp continuity (1.10.2)
+
+User requests fixing fMP4 fallback stutter too. Code-only testing policy applies; no real browser/device test this session.
+
+Inspection confirmed WebRTC received optional fixed15fps setts regularization, but the fallback MP4 mux still inherited packet-arrival timestamp bursts. FragmentCache.Arguments now accepts optional clockFps and chains setts after extract_extradata. Shared reader passes the same existing verified camera allowlist and WebRtcClockFps value used by WebRTC. Default0/other cameras preserve timestamps including B-frame behavior. No new camera connection or video encoder. Recording output and owner's segment/buffer settings unchanged. Historical configuration name WebRtcClockFps now controls both live transports; remeasure/disable if the camera FPS changes.
+
+Regression creates a no-B-frame15fps fixture, deliberately bunches five packet timestamps, then uses production fMP4 arguments. All60decoded frames match originals; output timestamps advance exactly6000ticks at90kHz (66.667ms) across fragment boundaries.21stream checks pass including existing B-frame preservation, simultaneous recording/HLS/copy output, future-keyframe join, auth revocation, cache bounds and initialization repair.6player checks pass including pause/rebuffer ownership and400consecutive fragment appends. Test initial MP4-input fixture was corrected to MPEG-TS because production input is Annex-B; no production failure involved.
+
+Release web/worker published and deployed1.10.2. Deployment hashes verified, external config/database preserved/backed up, backup-detection-20260928-232806 under NAS web-setup/GimDvr. Brief recorder restart during binary update. Existing APK loads shared server stream; no APK rebuild. No claim of fully smooth real playback or measured end-to-end latency from these code tests. Earlier control autoplay loop fix remains in place. Source and log committed/pushed.

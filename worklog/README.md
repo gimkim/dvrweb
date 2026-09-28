@@ -107,3 +107,5 @@
 - [2026-09-28_22-42-05_webrtc-live-transport.md](2026-09-28_22-42-05_webrtc-live-transport.md) — WebRTC-first shared live streams with fMP4 fallback
 
 - [2026-09-28_23-20-00_webrtc-firewall-clock-playback.md](2026-09-28_23-20-00_webrtc-firewall-clock-playback.md) � firewall confirmation, camera timestamp correction and actual WebRTC playback tests
+
+- [2026-09-28_23-28-40_fmp4-fallback-clock.md](2026-09-28_23-28-40_fmp4-fallback-clock.md) — regularize fallback fMP4 frame timestamps
