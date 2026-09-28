@@ -107,3 +107,5 @@ APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว�
 ปุ่มเปิด/ปิดการดูใช้inlineSVGแทนUnicode power glyph เพื่อไม่ขึ้นmissing-glyphบนมือถือ คงrole=switch/aria-checkedและlabelเดิม ([worklog](worklog/2026-09-28_18-56-18_mobile-power-icon-svg.md)).
 
 สถานะภาพสดทั้งเว็บ/Androidแสดงเฉพาะliveหรือbuffering ปิดดูซ่อนสถานะ ไม่แสดงคำอธิบายencode/transportยาวๆบนภาพหรือท้ายหน้ารวม ([worklog](worklog/2026-09-28_18-57-21_minimal-live-status-web-android.md)).
+
+แผงcontrolใช้พื้นผิวเดียวไม่มีกรอบซ้อน ปุ่มแพน48x44px;ยุบกว้าง216pxบนtouch/240pxdesktop ตั้งค่าขยาย300/310px มีfocus/pressedfeedbackและลากได้ ([worklog](worklog/2026-09-28_18-59-10_compact-mobile-controls.md)).

@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-59-10_compact-mobile-controls.md](2026-09-28_18-59-10_compact-mobile-controls.md) — compact borderless floating controls on mobile/web/app
+
 - [2026-09-28_18-57-21_minimal-live-status-web-android.md](2026-09-28_18-57-21_minimal-live-status-web-android.md) — live/buffering only on web and Android
 
 - [2026-09-28_18-56-18_mobile-power-icon-svg.md](2026-09-28_18-56-18_mobile-power-icon-svg.md) — SVG viewing switch icon independent of mobile fonts
