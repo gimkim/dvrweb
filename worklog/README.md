@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_21-41-00_motion-service-activation-check.md](2026-09-28_21-41-00_motion-service-activation-check.md) — IIS activation and actual NAS-to-CUDA completed jobs confirmed
+
 - [2026-09-28_20-38-06_remote-motion-service.md](2026-09-28_20-38-06_remote-motion-service.md) — CUDA/CPU MotionService, NAS remote polling/fallback; IIS UAC activation pending
 
 - [2026-09-28_20-34-45_detection-log-recheck.md](2026-09-28_20-34-45_detection-log-recheck.md) — worker continuing, recent aggregate3.61x, six exhausted historical errors
