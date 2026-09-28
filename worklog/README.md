@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_20-19-59_detection-log-review.md](2026-09-28_20-19-59_detection-log-review.md) — passive NAS log review: GPU confirmed, approximately 3.01x throughput with limited margin
+
 - [2026-09-28_20-10-23_nas-detection-diagnostics.md](2026-09-28_20-10-23_nas-detection-diagnostics.md) — persistent NAS timing/throughput/queue JSONL diagnostics
 
 - [2026-09-28_20-07-24_detection-throughput-boundary.md](2026-09-28_20-07-24_detection-throughput-boundary.md) — three-camera throughput threshold and pending NAS initialization
