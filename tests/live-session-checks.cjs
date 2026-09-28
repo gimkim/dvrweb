@@ -8,7 +8,7 @@ class FakeHls {
  constructor(options){this.options=options;this.destroyed=false;encoders.push(this);}loadSource(src){this.src=src;}attachMedia(v){this.video=v;}on(){}destroy(){this.destroyed=true;}
 }
 const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{addEventListener(){},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:(path)=>{requests.push(path);return new Promise((resolve,reject)=>pending.push({resolve,reject}));},isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
-context.startCopyStream=(video,id)=>{const player=new FakeHls({copy:true});player.attachMedia(video);player.src='api/cameras/'+id+'/copy-stream';return player;};
+context.startLiveStream=(video,id)=>{const player=new FakeHls({rtc:true});player.attachMedia(video);player.src='api/cameras/'+id+'/webrtc';return player;};
 vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=liveSessions;',context);
 (async()=>{
  const old=context.connectLive({id:'a'});context.sessions.get('a').destroy();pending.shift().resolve();await old;
@@ -16,13 +16,13 @@ vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=li
  const failed=context.connectLive({id:'a'});context.sessions.get('a').destroy();pending.shift().reject(Error('late'));await failed;
  console.log('PASS late failed request after stop is ignored');
  for(const camera of ['a','b','c']){const p=context.connectLive({id:camera});pending.shift().resolve();await p;}
- assert.equal(encoders[0].options.copy,true);assert.equal(encoders[0].src,'api/cameras/a/copy-stream');console.log('PASS overview selects continuous copy transport instead of HLS');
+ assert.equal(encoders[0].options.rtc,true);assert.equal(encoders[0].src,'api/cameras/a/webrtc');console.log('PASS overview selects shared WebRTC-first player');
  assert.equal(intervals.size,3);context.sessions.get('b').destroy();assert.equal(intervals.size,2);assert.equal(encoders[1].destroyed,true);assert.equal(encoders[0].destroyed,false);assert.equal(encoders[2].destroyed,false);
  console.log('PASS stopping one camera leaves other two players and heartbeats alive');
  const replacement=context.connectLive({id:'a'});assert.equal(encoders[0].destroyed,true);pending.shift().resolve();await replacement;assert.equal(intervals.size,2);
  context.sessions.forEach(s=>s.destroy());assert.equal(intervals.size,0);assert.equal(context.sessions.size,0);assert.ok(encoders.every(e=>e.destroyed));
  console.log('PASS reconnect replaces one session and shutdown clears all owned resources');
  context.isViewing=()=>false;context.document.querySelector=()=>null;const focus=context.connectLive({id:'a'},'focus');pending.shift().resolve();await focus;
- assert.equal(encoders.at(-1).src,'api/cameras/a/copy-stream');assert.equal(encoders.at(-1).options.copy,true);assert.ok(requests.every(p=>p.endsWith('watch?mode=overview')));context.sessions.forEach(s=>s.destroy());
- console.log('PASS single-camera view uses same copy stream and never requests an encoder lease, even with overview off');
+ assert.equal(encoders.at(-1).src,'api/cameras/a/webrtc');assert.equal(encoders.at(-1).options.rtc,true);assert.ok(requests.every(p=>p.endsWith('watch?mode=overview')));context.sessions.forEach(s=>s.destroy());
+ console.log('PASS single-camera view uses same WebRTC-first player and never requests an encoder lease, even with overview off');
 })().catch(e=>{console.error(e);process.exitCode=1;});

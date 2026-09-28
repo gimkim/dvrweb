@@ -20,9 +20,9 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     sealed record Manifest(string CameraId,string CameraName,string Root,string Csv,string Session);
     sealed class Run(Camera camera,Process process,string live,Manifest? manifest,IDisposable? job)
     {
-        public int SegmentMs; public Task? FragmentPump; public string Overview=live; public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
+        public int WebRtcPort; public int SegmentMs; public Task? FragmentPump; public string Overview=live; public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
     }
-    sealed record SharedState(DateTimeOffset Updated,bool Running,bool Recording,string? Live,int? ProcessId,string? Error,int? EncoderProcessId=null,string? Encoder=null,string? Overview=null);
+    sealed record SharedState(DateTimeOffset Updated,bool Running,bool Recording,string? Live,int? ProcessId,string? Error,int? EncoderProcessId=null,string? Encoder=null,string? Overview=null,int? WebRtcPort=null);
     public void Watch(string id,bool focus=false)
     {
         if(focus)id+=".focus";
@@ -50,9 +50,11 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     void PublishState(Camera c)
     {
         var active=runs.TryGetValue(c.Id,out var run)&&!run.Process.HasExited;
-        var state=new SharedState(DateTimeOffset.UtcNow,active,active&&run!.Camera.RecordingEnabled,active&&run!.Encoder is {HasExited:false}?run.Live:null,active?run!.Process.Id:null,errors.GetValueOrDefault(c.Id),active&&run!.Encoder is {HasExited:false}?run.Encoder.Id:null,run?.EncoderName,active?run!.Overview:null);
+        var state=new SharedState(DateTimeOffset.UtcNow,active,active&&run!.Camera.RecordingEnabled,active&&run!.Encoder is {HasExited:false}?run.Live:null,active?run!.Process.Id:null,errors.GetValueOrDefault(c.Id),active&&run!.Encoder is {HasExited:false}?run.Encoder.Id:null,run?.EncoderName,active?run!.Overview:null,active?run!.WebRtcPort:null);
         var file=Path.Combine(paths.Runtime,c.Id+".json");File.WriteAllText(file+".tmp",JsonSerializer.Serialize(state));File.Move(file+".tmp",file,true);
     }
+    public int? WebRtcPort(string id)=>paths.ExternalMedia?ReadShared(id)?.WebRtcPort:runs.TryGetValue(id,out var run)&&!run.Process.HasExited?run.WebRtcPort:null;
+    public static string[] WebRtcRelayArguments(int port)=>["-map","0:v:0","-c:v","copy","-an","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{port}?pkt_size=1316"];
     public object Status(string id)
     {
         if(paths.ExternalMedia)
@@ -127,6 +129,9 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         using var socket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
         var relayPort=((System.Net.IPEndPoint)socket.Client.LocalEndPoint!).Port;socket.Close();
         Add("-map","0:v:0","-map","0:a:0?","-c:v","copy","-c:a","aac","-ar","16000","-ac","1","-b:a","48k","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{relayPort}?pkt_size=1316");
+        using var rtcSocket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
+        var rtcPort=((System.Net.IPEndPoint)rtcSocket.Client.LocalEndPoint!).Port;rtcSocket.Close();
+        Add(WebRtcRelayArguments(rtcPort));
         Add(OverviewArguments(live));
         var segmentMs=store.StreamSettings().SegmentMs;Add(FragmentCache.Arguments(segmentMs));
         Manifest? manifest=null;
@@ -145,7 +150,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         process.ErrorDataReceived+=(_,e)=>{if(!string.IsNullOrWhiteSpace(e.Data)){errors[c.Id]="สตรีมมีข้อผิดพลาด กำลังลองเชื่อมต่อใหม่ ตรวจกล้องหรือพื้นที่บันทึกหากยังไม่กลับมา";log.LogWarning("Camera {Id}: {Error}",c.Id,Sanitize(e.Data,c));}};
         if(!process.Start())throw new InvalidOperationException("เริ่ม FFmpeg ไม่สำเร็จ");
         IDisposable? job=null;
-        try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();var run=new Run(c,process,live,manifest,job){SegmentMs=segmentMs,RelayPort=relayPort};runs[c.Id]=run;
+        try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();var run=new Run(c,process,live,manifest,job){WebRtcPort=rtcPort,SegmentMs=segmentMs,RelayPort=relayPort};runs[c.Id]=run;
             run.FragmentPump=Task.Run(async()=>{try{await FragmentCache.Pump(process.StandardOutput.BaseStream,Path.Combine(live,"fragments"));}catch(Exception e){log.LogWarning("Copy fragment cache {Id}: {Error}",c.Id,Sanitize(e.Message,c));try{await process.StandardOutput.BaseStream.CopyToAsync(Stream.Null);}catch(IOException){}}});errors.TryRemove(c.Id,out _);}
         catch{process.Kill(true);process.Dispose();job?.Dispose();throw;}
     }

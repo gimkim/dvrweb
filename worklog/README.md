@@ -103,3 +103,5 @@
 - [2026-09-28_22-26-11_live-rebuffer-reserve-fix.md](2026-09-28_22-26-11_live-rebuffer-reserve-fix.md) — enforce actual rebuffer reserves and preserve continuous playback
 
 - [2026-09-28_22-26-56_live-transport-options.md](2026-09-28_22-26-56_live-transport-options.md) — advisory WebRTC alternative to fMP4
+
+- [2026-09-28_22-42-05_webrtc-live-transport.md](2026-09-28_22-42-05_webrtc-live-transport.md) — WebRTC-first shared live streams with fMP4 fallback

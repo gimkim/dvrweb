@@ -155,6 +155,11 @@ foreach(var bad in new[]{new LiveStreamSettings(0,300,300,300),new LiveStreamSet
 {try{store.SaveStreamSettings(bad);throw new Exception("Invalid settings accepted");}catch(ArgumentException){}}
 Check(store.StreamSettings()==new LiveStreamSettings(100,250,350,450),"invalid settings cannot replace saved values");
 Check(FragmentCache.Arguments(150).Contains("150000")&&FragmentCache.Arguments(250).Contains("250000"),"fragment duration converts configured milliseconds to FFmpeg microseconds");
+Check(WebRtcService.ValidOffer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=recvonly\r\n"),"WebRTC receive-only video offer accepted");
+Check(!WebRtcService.ValidOffer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=sendrecv\r\n")&&!WebRtcService.ValidOffer(new string('x',100001)),"WebRTC publishing and oversized offers rejected");
+var secret=Guid.NewGuid().ToString();Check(WebRtcService.SessionLocation("a",new Uri("/a/whep/"+secret,UriKind.Relative)).Host=="127.0.0.1","WebRTC session location restricted to local gateway");
+foreach(var bad in new[]{"http://evil.invalid/a/whep/"+secret,"http://127.0.0.1:18889/b/whep/"+secret,"/a/whep/"+secret+"?x=1"}){bool rejected=false;try{WebRtcService.SessionLocation("a",new Uri(bad,UriKind.RelativeOrAbsolute));}catch(IOException){rejected=true;}Check(rejected,"WebRTC foreign or mismatched session location rejected");}
+var relay=MediaService.WebRtcRelayArguments(12345);Check(relay.Contains("copy")&&relay.Contains("-an")&&relay[^1]=="udp://127.0.0.1:12345?pkt_size=1316"&&!relay.Contains("-i"),"WebRTC video-only copy relay adds no camera input or encoder");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {

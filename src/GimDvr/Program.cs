@@ -19,6 +19,7 @@ builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraClien
 builder.Services.AddSingleton<PtzService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<PtzService>());
 builder.Services.AddSingleton<MediaService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<MediaService>());
 builder.Services.AddHostedService<DetectionService>();
+builder.Services.AddSingleton<WebRtcService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<WebRtcService>());
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o=>
 {
     o.Cookie.Name="GimDvr.Session";o.Cookie.Path=builder.Configuration["Dvr:PathBase"]??"/gimdvr";o.Cookie.HttpOnly=true;o.Cookie.SameSite=SameSiteMode.Strict;o.Cookie.SecurePolicy=builder.Environment.IsDevelopment()?CookieSecurePolicy.SameAsRequest:CookieSecurePolicy.Always;
@@ -92,7 +93,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.9.2"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.10.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -141,6 +142,12 @@ app.MapGet("/api/cameras/{id}/talk-capability",(string id,Store s)=>
     var camera=s.Camera(id);
     return Results.Ok(new{supported=false,reason=camera.Driver=="vstarcam"?"ยังส่งเสียงออกลำโพงผ่านเว็บไม่ได้: กล้องชุดนี้ไม่ประกาศ RTSP audio backchannel และต้องใช้โปรโตคอลเสียงเฉพาะ VStarcam":"ยังไม่มีไดรเวอร์ส่งเสียงย้อนกลับสำหรับกล้องนี้"});
 }).RequireAuthorization("control");
+app.MapPost("/api/cameras/{id}/webrtc",async(string id,WebRtcOffer offer,Store s,WebRtcService rtc,HttpContext ctx)=>{
+    var camera=s.Camera(id);if(!camera.Enabled)return Results.NotFound();
+    return Results.Ok(await rtc.Create(camera,offer.Sdp,ctx.User,ctx.RequestAborted));
+}).RequireAuthorization().WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(131072));
+app.MapPut("/api/webrtc/{id}",(string id,WebRtcService rtc,HttpContext ctx)=>rtc.Touch(id,ctx.User)?Results.NoContent():Results.NotFound()).RequireAuthorization();
+app.MapDelete("/api/webrtc/{id}",async(string id,WebRtcService rtc,HttpContext ctx)=>{await rtc.CloseOwned(id,ctx.User);return Results.NoContent();}).RequireAuthorization();
 app.MapGet("/api/cameras/{id}/copy-stream",async(string id,Store s,MediaService media,HttpContext ctx)=>
 {
     var camera=s.Camera(id);if(!camera.Enabled){ctx.Response.StatusCode=404;return;}
@@ -175,7 +182,7 @@ app.MapPut("/api/users/{id}",(string id,UserInput input,Store s,HttpContext ctx)
 app.MapGet("/api/audit",(Store s)=>s.AuditRows()).RequireAuthorization("admin");
 app.MapGet("/api/stream-settings",(Store s)=>s.StreamSettings()).RequireAuthorization("admin");
 app.MapPut("/api/stream-settings",(LiveStreamSettings value,Store s,HttpContext ctx)=>{try{s.SaveStreamSettings(value);s.Audit(ctx.User.Identity!.Name!,"stream.settings",System.Text.Json.JsonSerializer.Serialize(value));return Results.Ok(value);}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization("admin");
-app.MapGet("/api/system",()=>new{machine=Environment.MachineName,dataRoot=paths.Data,ffmpeg=File.Exists(paths.Ffmpeg),httpsRequiredForMicrophone=true}).RequireAuthorization("admin");
+app.MapGet("/api/system",(WebRtcService rtc)=>new{webrtc=rtc.Status(),machine=Environment.MachineName,dataRoot=paths.Data,ffmpeg=File.Exists(paths.Ffmpeg),httpsRequiredForMicrophone=true}).RequireAuthorization("admin");
 app.Run();
 record PasswordChange(string Current,string NewPassword);
 

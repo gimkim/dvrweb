@@ -113,3 +113,7 @@ Mobile playback: open ดูย้อนหลัง (Android has ภาพส�
 Recording search offers Motion/Human checkboxes (both selected means either detection). Play-all follows filtered results. Download original MP4 from each result or the clip player in the web browser. Pending/unknown detections do not match positive filters.
 
 Live buffering now pauses to accumulate the configured rebuffer reserve before resuming. Startup and recovery preserve their configured reserve even when live target is smaller; normal fragment appends do not restart playback. Shared web/Android player, normal reload/reopen to update.
+
+## WebRTC live (1.10.0)
+
+Web and Android now prefer shared copy-only WebRTC via NAS MediaMTX, with automatic fMP4 fallback. Existing recordings are unchanged. See [network setup, security, tests and limits](docs/webrtc.md). NAS firewall TCP+UDP8189 and router forwarding for Internet use must be configured; HTTPS alone does not carry peer media.
