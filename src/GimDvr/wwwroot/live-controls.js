@@ -1,7 +1,10 @@
 'use strict';
 let appFullscreenWrap=null;
 function liveFullscreenWrap(){return appFullscreenWrap||document.fullscreenElement;}
+function unlockLiveOrientation(){try{window.screen?.orientation?.unlock?.();}catch{}}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)unlockLiveOrientation();});
 window.exitLiveFullscreen=()=>{
+ unlockLiveOrientation();
  if(appFullscreenWrap){appFullscreenWrap.classList.remove('app-fullscreen');appFullscreenWrap=null;window.GimDvrAndroid?.setFullscreen(false);window.onLiveFullscreenChanged?.(null);document.dispatchEvent(new Event('gimdvrfullscreenchange'));}
  else if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
 };
@@ -17,7 +20,7 @@ function bindLiveControls(wrap){
  full.onclick=async()=>{try{
   if(liveFullscreenWrap()===wrap){window.exitLiveFullscreen();return;}
   if(window.GimDvrAndroid){window.exitLiveFullscreen();appFullscreenWrap=wrap;wrap.classList.add('app-fullscreen');window.GimDvrAndroid.setFullscreen(true);window.onLiveFullscreenChanged?.(wrap);document.dispatchEvent(new Event('gimdvrfullscreenchange'));}
-  else await wrap.requestFullscreen();
+  else{await wrap.requestFullscreen();if(document.fullscreenElement===wrap&&window.matchMedia?.('(pointer:coarse)').matches){try{await window.screen?.orientation?.lock?.('landscape');}catch{full.title='หมุนอุปกรณ์เป็นแนวนอน';}}}
  }catch{full.title='เบราว์เซอร์ไม่อนุญาตให้เปิดเต็มจอ';}};
  video.addEventListener('volumechange',soundState);video.addEventListener('pause',resume);video.addEventListener('canplay',resume);video.addEventListener('contextmenu',contextMenu);
  document.addEventListener('fullscreenchange',fullState);document.addEventListener('gimdvrfullscreenchange',fullState);soundState();fullState();

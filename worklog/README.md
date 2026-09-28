@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_19-01-36_pan-header-mobile-landscape.md](2026-09-28_19-01-36_pan-header-mobile-landscape.md) — shared pan header/up row; mobile single-view fullscreen landscape
+
 - [2026-09-28_18-59-10_compact-mobile-controls.md](2026-09-28_18-59-10_compact-mobile-controls.md) — compact borderless floating controls on mobile/web/app
 
 - [2026-09-28_18-57-21_minimal-live-status-web-android.md](2026-09-28_18-57-21_minimal-live-status-web-android.md) — live/buffering only on web and Android

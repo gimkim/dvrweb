@@ -109,3 +109,5 @@ APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว�
 สถานะภาพสดทั้งเว็บ/Androidแสดงเฉพาะliveหรือbuffering ปิดดูซ่อนสถานะ ไม่แสดงคำอธิบายencode/transportยาวๆบนภาพหรือท้ายหน้ารวม ([worklog](worklog/2026-09-28_18-57-21_minimal-live-status-web-android.md)).
 
 แผงcontrolใช้พื้นผิวเดียวไม่มีกรอบซ้อน ปุ่มแพน48x44px;ยุบกว้าง216pxบนtouch/240pxdesktop ตั้งค่าขยาย300/310px มีfocus/pressedfeedbackและลากได้ ([worklog](worklog/2026-09-28_18-59-10_compact-mobile-controls.md)).
+
+ชื่อกล้อง/ขึ้น/ปิดอยู่แถวเดียวในcontrol กดชื่อกล้องบนmobileขอfullscreenทันทีจากgestureแล้วlocklandscape(Webถ้ารองรับ);Androidใช้nativebridgeเดิม คงplayerและเปิดcontrolในfullscreen;ออกแล้วunlock/portrait ([worklog](worklog/2026-09-28_19-01-36_pan-header-mobile-landscape.md)).

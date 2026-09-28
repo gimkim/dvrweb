@@ -20,7 +20,7 @@ $('#player').addEventListener('close',()=>{$('#playVideo').pause();$('#playVideo
 setInterval(()=>{$('#clock').textContent=new Date().toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 function title(name,sub,action=''){return `<div class="page-title"><div><h1>${name}</h1><p>${sub}</p></div>${action}</div>`;}
 async function navigate(next,id=singleId){if((page==='live'||page==='single')&&(next==='live'||next==='single')&&document.querySelector('.live-grid')&&(next!==page||id!==singleId)){page=next;singleId=id;applyLiveLayout(next==='single'?id:null);return;}stopLive();page=next;singleId=id;document.body.classList.toggle('single-view',page==='single');document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#main').innerHTML='<p class="muted">กำลังโหลด…</p>';cameras=await api('cameras');if(page==='live')renderLive();if(page==='single')renderSingle();if(page==='cameras')renderCameras();if(page==='recordings')renderRecordings();if(page==='users')await renderUsers();if(page==='system')await renderSystem();}
-function openSingle(id){history.pushState({camera:id},'', '#camera='+encodeURIComponent(id));navigate('single',id).catch(e=>toast(e.message));}
+function openSingle(id){history.pushState({camera:id},'', '#camera='+encodeURIComponent(id));navigate('single',id).catch(e=>toast(e.message));if(androidApp||window.matchMedia?.('(pointer:coarse)').matches){document.querySelector('.single-camera [data-live-fullscreen]')?.click();}}
 function showOverview(){history.pushState({},'',location.pathname+location.search);navigate('live').catch(e=>toast(e.message));}
 window.addEventListener('popstate',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('camera');if(me)navigate(id?'single':'live',id).catch(e=>toast(e.message));});
 function renderLive(){
@@ -71,7 +71,7 @@ async function connectLive(c,mode='overview'){
  hls=startCopyStream(video,c.id,message=>{if(active)liveMessage(c.id,message);});
  }catch(e){if(!active)return;session.destroy();throw e;}
 }
-window.onLiveFullscreenChanged=wrap=>{closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));};
+window.onLiveFullscreenChanged=wrap=>{const wasOpen=$('#controls').open;closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));if(wasOpen&&page==='single'&&me?.role!=='viewer'){const c=cameras.find(c=>c.id===singleId);if(c)showControls(c);}};
 window.gimDvrSuspend=()=>{stopLive();};
 window.gimDvrResume=()=>{if(me&&(page==='live'||page==='single')){stopLive();page==='single'?renderSingle():renderLive();}};
 

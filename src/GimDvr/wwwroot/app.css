@@ -39,3 +39,8 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 #controls .settings-row{gap:8px;flex-wrap:wrap}#controls .settings-row select{width:120px}
 #controls #controlError{margin:4px 0 0}#controls #controlError:empty{display:none}
 @media(pointer:coarse){#controls,.android-app #controls{width:min(216px,calc(100vw - 16px));resize:none}#controls:has(details[open]),.android-app #controls:has(details[open]){width:min(300px,calc(100vw - 16px))}}
+/* Share the top pad row with the draggable camera title and close action. */
+#controls:has(.dpad) .dialog-title{position:absolute;top:8px;left:8px;right:8px;display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:2px;height:44px;margin:0;pointer-events:none}
+#controls:has(.dpad) .dialog-title h2{grid-column:1;pointer-events:auto;align-self:center;line-height:1.25;white-space:normal;overflow-wrap:anywhere;max-height:34px}
+#controls:has(.dpad) #closeControls{grid-column:3;justify-self:end;pointer-events:auto;min-height:44px;min-width:44px}
+#controls .dpad{grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr)}#controls .dpad button{width:48px;justify-self:center}
