@@ -84,25 +84,30 @@ if(OperatingSystem.IsWindows())
  var pid=Pid(recorder);
  Check(!JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoding").GetBoolean(),"recording alone does not start HLS encoder");
  for(int i=0;i<25;i++)recorder.Watch(cam.Id);
+ await Task.Delay(600);
+ Check(!JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoding").GetBoolean(),"overview viewers do not start a video encoder");
+ Check(Pid(recorder)==pid,"overview viewers reuse recording reader");
+ for(int i=0;i<25;i++)recorder.Watch(cam.Id,true);
  await Task.Delay(2200);
  Check(Pid(recorder)==pid,"25 viewers reuse the recording process");
  var encoderPid=JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoderProcessId").GetInt32();
- for(int i=0;i<25;i++)recorder.Watch(cam.Id);
+ for(int i=0;i<25;i++)recorder.Watch(cam.Id,true);
  await Task.Delay(500);
  Check(JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoderProcessId").GetInt32()==encoderPid,"25 viewers share one live encoder");
  var proxyConfig=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DataRoot"]=paths.Data,["Dvr:MediaOwner"]="worker",["Dvr:Ffmpeg"]="must-not-execute"}).Build();
  var proxy=new MediaService(store,new CameraClient(store),new Paths(proxyConfig,new Env(root)),NullLogger<MediaService>.Instance);
- await proxy.StartAsync(CancellationToken.None);proxy.Watch(cam.Id);await Task.Delay(100);
+ await proxy.StartAsync(CancellationToken.None);proxy.Watch(cam.Id,true);await Task.Delay(100);
  Check(Pid(proxy)==pid,"web proxy reuses external worker process without spawning FFmpeg");
  await proxy.StopAsync(CancellationToken.None);
  await Task.Delay(2200);
  Check(Pid(recorder)==pid,"stopping web proxy leaves background recording process alive");
- await Task.Delay(9000);
- Check(!JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoding").GetBoolean(),"HLS encoder stops after last viewer leaves");
+ for(int i=0;i<5;i++){recorder.Watch(cam.Id);await Task.Delay(1800);}
+ Check(!JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("encoding").GetBoolean(),"focus encoder stops despite ongoing overview watches");
  Check(Pid(recorder)==pid,"recording reader survives viewer departure");
  await recorder.StopAsync(CancellationToken.None);
  Check(!JsonSerializer.SerializeToElement(recorder.Status(cam.Id)).GetProperty("running").GetBoolean(),"recorder shutdown closes owned process");
 }
+Check(MediaService.OverviewArguments("fixture").Contains("copy")&&!MediaService.OverviewArguments("fixture").Contains("aac"),"overview remux uses video copy with no audio encoding");
 var rangeStart=DateTimeOffset.Parse("2026-09-28T10:00:00Z");
 store.AddRecording(new("range-before","range-camera","Range","before.mp4",rangeStart.AddSeconds(-60),60,1));
 store.AddRecording(new("range-overlap","range-camera","Range","overlap.mp4",rangeStart.AddSeconds(-30),60,1));

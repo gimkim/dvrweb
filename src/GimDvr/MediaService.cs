@@ -20,11 +20,12 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     sealed record Manifest(string CameraId,string CameraName,string Root,string Csv,string Session);
     sealed class Run(Camera camera,Process process,string live,Manifest? manifest,IDisposable? job)
     {
-        public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
+        public string Overview=live; public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
     }
-    sealed record SharedState(DateTimeOffset Updated,bool Running,bool Recording,string? Live,int? ProcessId,string? Error,int? EncoderProcessId=null,string? Encoder=null);
-    public void Watch(string id)
+    sealed record SharedState(DateTimeOffset Updated,bool Running,bool Recording,string? Live,int? ProcessId,string? Error,int? EncoderProcessId=null,string? Encoder=null,string? Overview=null);
+    public void Watch(string id,bool focus=false)
     {
+        if(focus)id+=".focus";
         var now=DateTimeOffset.UtcNow;watchers[id]=now;
         if(paths.ExternalMedia)lock(leaseGate)
         {
@@ -34,11 +35,13 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
             leaseWrites[id]=now;
         }
     }
-    DateTimeOffset LastWatch(string id)
+    DateTimeOffset LastWatch(string id,bool focus=false)
     {
+        if(focus)id+=".focus";
         var file=Path.Combine(paths.Runtime,id+".watch");
         return new[]{watchers.GetValueOrDefault(id),File.Exists(file)?new DateTimeOffset(File.GetLastWriteTimeUtc(file)):DateTimeOffset.MinValue}.Max();
     }
+    DateTimeOffset LastAnyWatch(string id)=>new[]{LastWatch(id),LastWatch(id,true)}.Max();
     SharedState? ReadShared(string id)
     {
         try{using var f=new FileStream(Path.Combine(paths.Runtime,id+".json"),FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete);var s=JsonSerializer.Deserialize<SharedState>(f);return s?.Updated>DateTimeOffset.UtcNow.AddSeconds(-10)?s:null;}
@@ -47,7 +50,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     void PublishState(Camera c)
     {
         var active=runs.TryGetValue(c.Id,out var run)&&!run.Process.HasExited;
-        var state=new SharedState(DateTimeOffset.UtcNow,active,active&&run!.Camera.RecordingEnabled,active&&run!.Encoder is {HasExited:false}?run.Live:null,active?run!.Process.Id:null,errors.GetValueOrDefault(c.Id),active&&run!.Encoder is {HasExited:false}?run.Encoder.Id:null,run?.EncoderName);
+        var state=new SharedState(DateTimeOffset.UtcNow,active,active&&run!.Camera.RecordingEnabled,active&&run!.Encoder is {HasExited:false}?run.Live:null,active?run!.Process.Id:null,errors.GetValueOrDefault(c.Id),active&&run!.Encoder is {HasExited:false}?run.Encoder.Id:null,run?.EncoderName,active?run!.Overview:null);
         var file=Path.Combine(paths.Runtime,c.Id+".json");File.WriteAllText(file+".tmp",JsonSerializer.Serialize(state));File.Move(file+".tmp",file,true);
     }
     public object Status(string id)
@@ -55,21 +58,21 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         if(paths.ExternalMedia)
         {
             var state=ReadShared(id);
-            return new{running=state?.Running??false,recording=state?.Recording??false,liveReady=state?.Live is {} live&&File.Exists(Path.Combine(live,"index.m3u8")),error=state?.Error??(state is null?"Background recorder ยังไม่พร้อม กรุณาตรวจ Windows Service":null),owner="worker",encoding=state?.EncoderProcessId is not null,encoder=state?.Encoder,encoderProcessId=state?.EncoderProcessId,processId=state?.ProcessId,inputConnections=state?.Running==true?1:0};
+            return new{running=state?.Running??false,recording=state?.Recording??false,liveReady=state?.Overview is {} live&&File.Exists(Path.Combine(live,"index.m3u8")),error=state?.Error??(state is null?"Background recorder ยังไม่พร้อม กรุณาตรวจ Windows Service":null),owner="worker",encoding=state?.EncoderProcessId is not null,encoder=state?.Encoder,encoderProcessId=state?.EncoderProcessId,processId=state?.ProcessId,inputConnections=state?.Running==true?1:0};
         }
         var active=runs.TryGetValue(id,out var run)&&!run.Process.HasExited;
-        return new{running=active,recording=active&&run!.Camera.RecordingEnabled,liveReady=active&&run!.Encoder is {HasExited:false}&&File.Exists(Path.Combine(run!.Live,"index.m3u8")),error=errors.GetValueOrDefault(id),owner="web",encoding=active&&run!.Encoder is {HasExited:false},encoder=active?run!.EncoderName:null,encoderProcessId=active&&run!.Encoder is {HasExited:false}?(int?)run.Encoder.Id:null,processId=active?(int?)run!.Process.Id:null,inputConnections=active?1:0};
+        return new{running=active,recording=active&&run!.Camera.RecordingEnabled,liveReady=active&&File.Exists(Path.Combine(run!.Overview,"index.m3u8")),error=errors.GetValueOrDefault(id),owner="web",encoding=active&&run!.Encoder is {HasExited:false},encoder=active?run!.EncoderName:null,encoderProcessId=active&&run!.Encoder is {HasExited:false}?(int?)run.Encoder.Id:null,processId=active?(int?)run!.Process.Id:null,inputConnections=active?1:0};
     }
-    public string? LiveFile(string id,string name)
+    public string? LiveFile(string id,string name,bool focus=false)
     {
         if(!Regex.IsMatch(name,@"^(index\.m3u8|seg\d+\.ts)$"))return null;
-        Watch(id);
+        Watch(id,focus);
         if(paths.ExternalMedia)
         {
-            var live=ReadShared(id)?.Live;
+            var state=ReadShared(id);var live=focus?state?.Live:state?.Overview;
             return live is not null&&Path.GetFullPath(live).StartsWith(Path.Combine(paths.Live,id)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)?Path.Combine(live,name):null;
         }
-        return runs.TryGetValue(id,out var run)&&run.Encoder is {HasExited:false}?Path.Combine(run.Live,name):null;
+        return runs.TryGetValue(id,out var run)&&!run.Process.HasExited&&(!focus||run.Encoder is {HasExited:false})?Path.Combine(focus?run.Live:run.Overview,name):null;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -90,11 +93,11 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
                     foreach(var pair in runs.ToArray())
                     {
                         var current=configured.Find(c=>c.Id==pair.Key);
-                        var wanted=current is not null&&current.Enabled&&(current.RecordingEnabled||LastWatch(current.Id)>DateTimeOffset.UtcNow.AddSeconds(-8));
+                        var wanted=current is not null&&current.Enabled&&(current.RecordingEnabled||LastAnyWatch(current.Id)>DateTimeOffset.UtcNow.AddSeconds(-8));
                         if(!wanted||current!.Revision!=pair.Value.Camera.Revision||pair.Value.Process.HasExited)
                         {await Stop(pair.Key);retryAfter[pair.Key]=DateTimeOffset.UtcNow.AddSeconds(3);}
                     }
-                    foreach(var c in configured.Where(c=>c.Enabled&&(c.RecordingEnabled||LastWatch(c.Id)>DateTimeOffset.UtcNow.AddSeconds(-8))))
+                    foreach(var c in configured.Where(c=>c.Enabled&&(c.RecordingEnabled||LastAnyWatch(c.Id)>DateTimeOffset.UtcNow.AddSeconds(-8))))
                     {
                         if(runs.ContainsKey(c.Id)||retryAfter.GetValueOrDefault(c.Id)>DateTimeOffset.UtcNow)continue;
                         try{Start(c);}
@@ -124,6 +127,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         using var socket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
         var relayPort=((System.Net.IPEndPoint)socket.Client.LocalEndPoint!).Port;socket.Close();
         Add("-map","0:v:0","-map","0:a:0?","-c:v","copy","-c:a","aac","-ar","16000","-ac","1","-b:a","48k","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{relayPort}?pkt_size=1316");
+        Add(OverviewArguments(live));
         Manifest? manifest=null;
         if(c.RecordingEnabled)
         {
@@ -143,6 +147,8 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();runs[c.Id]=new(c,process,live,manifest,job){RelayPort=relayPort};errors.TryRemove(c.Id,out _);}
         catch{process.Kill(true);process.Dispose();job?.Dispose();throw;}
     }
+    // Overview is a video-only remux: no decoder, scaling or video encoder.
+    public static string[] OverviewArguments(string live)=>["-map","0:v:0","-c:v","copy","-an","-f","hls","-hls_time","2","-hls_list_size","6","-hls_start_number_source","epoch_us","-hls_flags","delete_segments+independent_segments+temp_file","-hls_segment_filename",Path.Combine(live,"seg%09d.ts"),Path.Combine(live,"index.m3u8")];
     public static string[] RecordingArguments(string csv,string folder)=>["-map","0:v:0","-map","0:a:0?","-c:v","copy","-bsf:v","extract_extradata","-c:a","aac","-ar","16000","-ac","1","-b:a","48k","-f","segment","-segment_time","60","-reset_timestamps","1","-strftime","1","-segment_format","mp4","-segment_format_options","movflags=+faststart","-segment_list",csv,"-segment_list_type","csv",Path.Combine(folder,"%Y%m%dT%H%M%S.mp4")];
     public void ValidateRecordingRoot(string root)
     {
@@ -212,7 +218,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     {
         foreach(var camera in Directory.EnumerateDirectories(paths.Live))
         foreach(var session in Directory.EnumerateDirectories(camera))
-            if(!runs.Values.Any(r=>r.Live==session)&&Directory.GetLastWriteTimeUtc(session)<DateTime.UtcNow.AddMinutes(-10))Directory.Delete(session,true);
+            if(!runs.Values.Any(r=>r.Live==session||r.Overview==session)&&Directory.GetLastWriteTimeUtc(session)<DateTime.UtcNow.AddMinutes(-10))Directory.Delete(session,true);
     }
 }
 

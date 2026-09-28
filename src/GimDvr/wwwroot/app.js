@@ -2,7 +2,7 @@
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me,cameras=[],page='live',players=[],liveTimers=[],clips=[],clipIndex=0,refreshTimer,toastTimer;
 const androidApp=/GimDvrAndroid/.test(navigator.userAgent);if(androidApp)document.documentElement.classList.add('android-app');
-const liveSessions=new Map();let viewPrefs={};
+const liveSessions=new Map();let viewPrefs={};let singleId=new URLSearchParams(location.hash.slice(1)).get('camera');if(singleId)page='single';
 function loadViewPrefs(){try{const value=JSON.parse(localStorage.getItem('gimdvr.viewing.'+me.id)||'{}');viewPrefs=value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{viewPrefs={};}}
 function isViewing(id){return viewPrefs[id]!==false;}
 function saveViewPrefs(){try{localStorage.setItem('gimdvr.viewing.'+me.id,JSON.stringify(viewPrefs));}catch{toast('อุปกรณ์ไม่อนุญาตให้จำสถานะการดู');}}
@@ -10,20 +10,33 @@ const roles={admin:'ผู้ดูแล',operator:'ผู้ควบคุม
 async function api(path,method='GET',body){const r=await fetch(`api/${path}`,{method,headers:{'Content-Type':'application/json','X-DVR-Request':'1'},body:body===undefined?undefined:JSON.stringify(body)});if(r.status===401&&path!=='login'){signedOut();throw Error('กรุณาเข้าสู่ระบบอีกครั้ง');}let data;try{data=await r.json();}catch{data={};}if(!r.ok)throw Error(data.error||`คำขอไม่สำเร็จ (${r.status})`);return data;}
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,6000);}
 function stopLive(){window.exitLiveFullscreen?.();closeFloatingControls();document.body.appendChild($('#controls'));liveSessions.forEach(s=>s.destroy());liveSessions.clear();players.forEach(p=>p.destroy());players=[];liveTimers.forEach(clearInterval);liveTimers=[];document.querySelectorAll('.live-video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});clearInterval(refreshTimer);}
-function signedOut(){stopLive();$('#shell').hidden=true;$('#login').hidden=false;me=null;}
+function signedOut(){stopLive();document.body.classList.remove('single-view');$('#shell').hidden=true;$('#login').hidden=false;me=null;}
 async function start(){try{me=await api('me');loadViewPrefs();$('#login').hidden=true;$('#shell').hidden=false;$('#accountButton').textContent=`${me.username} · ${roles[me.role]}`;document.querySelectorAll('.admin-only').forEach(e=>e.hidden=me.role!=='admin');await navigate(page);}catch{signedOut();}}
 $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;$('#loginError').textContent='';try{const f=new FormData(e.target);await api('login','POST',{username:f.get('username'),password:f.get('password'),rememberDevice:androidApp});e.target.reset();window.GimDvrAndroid?.flushCookies();await start();}catch(err){$('#loginError').textContent=err.message;}finally{button.disabled=false;}});
 $('#logout').onclick=async()=>{try{await api('logout','POST');window.GimDvrAndroid?.flushCookies();signedOut();}catch(e){toast('ออกจากระบบไม่สำเร็จ: '+e.message);}};
-document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>navigate(b.dataset.page).catch(e=>toast(e.message)));
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{history.pushState({},'',location.pathname+location.search);navigate(b.dataset.page).catch(e=>toast(e.message));});
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).close());
 $('#player').addEventListener('close',()=>{$('#playVideo').pause();$('#playVideo').removeAttribute('src');$('#playVideo').load();});
 setInterval(()=>{$('#clock').textContent=new Date().toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 function title(name,sub,action=''){return `<div class="page-title"><div><h1>${name}</h1><p>${sub}</p></div>${action}</div>`;}
-async function navigate(next){stopLive();page=next;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#main').innerHTML='<p class="muted">กำลังโหลด…</p>';cameras=await api('cameras');if(page==='live')renderLive();if(page==='cameras')renderCameras();if(page==='recordings')renderRecordings();if(page==='users')await renderUsers();if(page==='system')await renderSystem();}
+async function navigate(next,id=singleId){stopLive();page=next;singleId=id;document.body.classList.toggle('single-view',page==='single');document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#main').innerHTML='<p class="muted">กำลังโหลด…</p>';cameras=await api('cameras');if(page==='live')renderLive();if(page==='single')renderSingle();if(page==='cameras')renderCameras();if(page==='recordings')renderRecordings();if(page==='users')await renderUsers();if(page==='system')await renderSystem();}
+function openSingle(id){history.pushState({camera:id},'', '#camera='+encodeURIComponent(id));navigate('single',id).catch(e=>toast(e.message));}
+function showOverview(){history.pushState({},'',location.pathname+location.search);navigate('live').catch(e=>toast(e.message));}
+window.addEventListener('popstate',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('camera');if(me)navigate(id?'single':'live',id).catch(e=>toast(e.message));});
 function renderLive(){
- $('#main').innerHTML=title('ภาพสด','ดูทุกมุมบ้าน ผ่านเซิร์ฟเวอร์ของคุณ',me.role==='admin'?'<button id="addCamera" class="primary">＋ เพิ่มกล้อง</button>':'')+`<div class="stats"><div class="stat"><strong>${cameras.length}</strong> กล้องทั้งหมด</div><div class="stat"><strong id="recordingCount">${cameras.filter(c=>c.status.recording).length}</strong> กำลังบันทึก</div><div class="stat"><span class="dot"></span> สตรีมผ่านเซิร์ฟเวอร์</div></div><div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ">⏻</button><h3>${esc(c.name)}</h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}" data-record>${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'?`<button type="button" class="fullscreen-camera-control" data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button type="button" data-live-mute aria-label="เปิดเสียง" title="เปิดเสียง">🔇</button><button type="button" data-live-fullscreen aria-label="เต็มจอ" title="เต็มจอ">⛶</button></div><div class="video-status">${!c.enabled?'ปิดใช้งานกล้อง':isViewing(c.id)?'กำลังเชื่อมต่อ…':'ปิดการดูภาพ'}</div></div><div class="camera-bottom"><small>${esc(c.driver==='vstarcam'?'VStarcam':'RTSP')} · ${esc(c.host)}<span data-encoder>${c.status.encoding?(c.status.encoder==='h264_qsv'?' · Quick Sync':' · CPU'):''}</span></small><div><button data-snapshot="${c.id}">ภาพนิ่ง</button> ${me.role!=='viewer'?`<button data-control="${c.id}">ควบคุม ↗</button>`:''} ${me.role==='admin'?`<button data-edit="${c.id}" aria-label="แก้ไข ${esc(c.name)}">⚙</button>`:''}</div></div></article>`).join('')}${!cameras.length?'<div class="empty-card"><h3>เพิ่มกล้องตัวแรกของคุณ</h3><p>รองรับกล้อง VStarcam และ RTSP</p></div>':''}</div><p class="note">เสียงเริ่มต้นปิดอยู่ เปิดเสียงจากเครื่องเล่นได้ · สตรีมอาจหน่วงจากเหตุการณ์จริงไม่กี่วินาที · การดูภาพสดไม่เปิดการบันทึกถาวร</p>`;
- bindCameraButtons();document.querySelectorAll('.camera-card .video-wrap').forEach(w=>players.push(bindLiveControls(w)));document.querySelectorAll('[data-view-toggle]').forEach(b=>b.onclick=()=>toggleViewing(b.dataset.viewToggle));cameras.filter(c=>c.enabled&&isViewing(c.id)).forEach(c=>connectLive(c).catch(e=>liveMessage(c.id,e.message)));
- refreshTimer=setInterval(async()=>{try{const list=await api('cameras');$('#recordingCount').textContent=list.filter(c=>c.status.recording).length;for(const c of list){const card=document.querySelector(`.camera-card[data-id="${c.id}"]`);const badge=card?.querySelector('[data-record]');if(badge){badge.textContent=c.status.recording?'● REC':c.recordingEnabled?'รอการบันทึก':'ไม่ได้บันทึก';badge.className='tag '+(c.status.recording?'recording':'off');}const encoder=card?.querySelector('[data-encoder]');if(encoder)encoder.textContent=c.status.encoding?(c.status.encoder==='h264_qsv'?' · Quick Sync':' · CPU'):'';if(c.status.error&&isViewing(c.id))liveMessage(c.id,c.status.error);}}catch{}},12000);
+ document.body.classList.remove('single-view');
+ $('#main').innerHTML=title('ภาพสด','เลือกชื่อกล้องเพื่อดูเดี่ยวและควบคุม')+`<div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ">⏻</button><h3><button class="camera-open" data-open-camera="${esc(c.id)}" ${c.enabled?'':'disabled'}>${esc(c.name)} ↗</button></h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}">${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="video-status">${!c.enabled?'ปิดใช้งานกล้อง':isViewing(c.id)?'กำลังเชื่อมต่อ…':'ปิดการดูภาพ'}</div></div></article>`).join('')}</div><p class="note">ภาพรวมส่งวิดีโอจากกล้องผ่านเซิร์ฟเวอร์โดยไม่เข้ารหัสใหม่ · ไม่มีเสียงในหน้ารวม · เลือกชื่อกล้องเพื่อดูแบบหน่วงต่ำ</p>`;
+ document.querySelectorAll('[data-open-camera]').forEach(b=>b.onclick=()=>openSingle(b.dataset.openCamera));
+ document.querySelectorAll('[data-view-toggle]').forEach(b=>b.onclick=()=>toggleViewing(b.dataset.viewToggle));
+ cameras.filter(c=>c.enabled&&isViewing(c.id)).forEach(c=>connectLive(c).catch(e=>liveMessage(c.id,e.message)));
+}
+function renderSingle(){
+ const c=cameras.find(c=>c.id===singleId);if(!c||!c.enabled){showOverview();return;}
+ document.body.classList.add('single-view');
+ $('#main').innerHTML=`<section class="single-camera camera-card" data-id="${esc(c.id)}" data-viewing="true"><div class="single-top"><button id="backOverview">← กล้องทั้งหมด</button><h2>${esc(c.name)}</h2><span class="single-mode">ภาพสดหน่วงต่ำ</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'?`<button data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button data-live-mute aria-label="เปิดเสียง">🔇</button><button data-live-fullscreen aria-label="เต็มจอ">⛶</button></div><div class="video-status">กำลังเปิดสตรีมหน่วงต่ำ…</div></div></section>`;
+ $('#backOverview').onclick=showOverview;bindCameraButtons();players.push(bindLiveControls($('.single-camera .video-wrap')));
+ connectLive(c,'focus').catch(e=>liveMessage(c.id,e.message));
+ if(me.role!=='viewer'){document.querySelector('.single-camera .video-wrap').appendChild($('#controls'));showControls(c);}
 }
 function liveMessage(id,text){const card=document.querySelector(`.camera-card[data-id="${id}"]`);if(card)card.querySelector('.video-status').textContent=text;}
 function toggleViewing(id){
@@ -34,26 +47,27 @@ function toggleViewing(id){
  if(viewing)connectLive(c).catch(e=>liveMessage(id,e.message));
  else{liveSessions.get(id)?.destroy();liveMessage(id,'ปิดการดูภาพ');}
 }
-async function connectLive(c){
- liveSessions.get(c.id)?.destroy();const video=document.getElementById(`v-${c.id}`);if(!video||!isViewing(c.id))return;
+async function connectLive(c,mode='overview'){
+ liveSessions.get(c.id)?.destroy();const video=document.getElementById(`v-${c.id}`);if(!video||(mode==='overview'&&!isViewing(c.id)))return;
  let active=true,hls=null,heartbeat=null,retry=null;
- const playing=()=>liveMessage(c.id,'● LIVE · ภาพจากเซิร์ฟเวอร์'),waiting=()=>liveMessage(c.id,'กำลังรอภาพ…');
+ const playing=()=>liveMessage(c.id,mode==='focus'?'● LIVE · หน่วงต่ำ':'● LIVE · ส่งต่อวิดีโอโดยไม่ encode'),waiting=()=>liveMessage(c.id,'กำลังรอภาพ…');
  const session={destroy(){if(!active)return;active=false;clearInterval(heartbeat);clearTimeout(retry);hls?.destroy();video.removeEventListener('playing',playing);video.removeEventListener('waiting',waiting);video.removeAttribute('src');video.load();if(liveSessions.get(c.id)===session)liveSessions.delete(c.id);}};
  liveSessions.set(c.id,session);video.addEventListener('playing',playing);video.addEventListener('waiting',waiting);
- try{await api(`cameras/${c.id}/watch`,'POST');if(!active)return;
- heartbeat=setInterval(()=>{if(active)api(`cameras/${c.id}/watch`,'POST').catch(()=>{});},3000);
- const src=`api/live/${c.id}/index.m3u8`;
+ const watch=async()=>{const status=await api(`cameras/${c.id}/watch?mode=${mode}`,'POST');if(active&&mode==='focus'){const label=document.querySelector('.single-mode');if(label)label.textContent=status?.encoder==='h264_qsv'?'หน่วงต่ำ · Quick Sync':status?.encoder==='libx264'?'หน่วงต่ำ · CPU สำรอง':'กำลังเปิดสตรีมหน่วงต่ำ…';}};
+ try{await watch();if(!active)return;
+ heartbeat=setInterval(()=>{if(active)watch().catch(()=>{});},3000);
+ const src=`api/${mode==='focus'?'focus':'live'}/${c.id}/index.m3u8`;
  if(Hls.isSupported()){
-  hls=new Hls({enableWorker:true,liveSyncDurationCount:2,liveMaxLatencyDurationCount:6,maxLiveSyncPlaybackRate:1.25,maxBufferLength:5,backBufferLength:4,manifestLoadPolicy:{default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:15000,timeoutRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000},errorRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000}}}});
+  hls=new Hls({enableWorker:true,...(mode==='focus'?{liveSyncDuration:0.7,liveMaxLatencyDuration:2,maxLiveSyncPlaybackRate:1.1,maxBufferLength:1.5,backBufferLength:1}:{liveSyncDurationCount:2,liveMaxLatencyDurationCount:6,maxLiveSyncPlaybackRate:1,maxBufferLength:8,backBufferLength:4}),manifestLoadPolicy:{default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:15000,timeoutRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000},errorRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000}}}});
   hls.loadSource(src);hls.attachMedia(video);hls.on(Hls.Events.MANIFEST_PARSED,()=>{if(active)video.play().catch(()=>{});});
   hls.on(Hls.Events.ERROR,(_,d)=>{if(active&&d.fatal){liveMessage(c.id,'เชื่อมต่อขัดข้อง กำลังลองใหม่…');if(d.type===Hls.ErrorTypes.MEDIA_ERROR)hls.recoverMediaError();else{clearTimeout(retry);retry=setTimeout(()=>{if(active)hls.loadSource(src);},3000);}}});
  }else if(video.canPlayType('application/vnd.apple.mpegurl')){retry=setTimeout(()=>{if(active){video.src=src;video.play().catch(()=>{});}},4000);}
  else liveMessage(c.id,'เบราว์เซอร์นี้ไม่รองรับวิดีโอ HLS');
  }catch(e){if(!active)return;session.destroy();throw e;}
 }
-window.onLiveFullscreenChanged=wrap=>{closeFloatingControls();(wrap||document.body).appendChild($('#controls'));};
+window.onLiveFullscreenChanged=wrap=>{closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));};
 window.gimDvrSuspend=()=>{stopLive();};
-window.gimDvrResume=()=>{if(me&&page==='live'){stopLive();renderLive();}};
+window.gimDvrResume=()=>{if(me&&(page==='live'||page==='single')){stopLive();page==='single'?renderSingle():renderLive();}};
 
 
 function bindCameraButtons(){const add=$('#addCamera');if(add)add.onclick=()=>editCamera();document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editCamera(cameras.find(c=>c.id===b.dataset.edit)));document.querySelectorAll('[data-control]').forEach(b=>b.onclick=()=>showControls(cameras.find(c=>c.id===b.dataset.control)));document.querySelectorAll('[data-snapshot]').forEach(b=>b.onclick=()=>window.open(`api/cameras/${b.dataset.snapshot}/snapshot`,'_blank','noopener'));}

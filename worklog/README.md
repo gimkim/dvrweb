@@ -4,6 +4,10 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-05-36_code-tests-only-policy.md](2026-09-28_18-05-36_code-tests-only-policy.md) — user policy: code smoke/functional tests only
+
+- [2026-09-28_18-04-54_overview-copy-and-focus-qsv.md](2026-09-28_18-04-54_overview-copy-and-focus-qsv.md) — overview video copy and single-camera low-latency QSV 1.5.0
+
 - [2026-09-28_17-23-45_android-and-per-camera-viewing.md](2026-09-28_17-23-45_android-and-per-camera-viewing.md) — Android APK 1.0.0 and per-camera viewing, web 1.4.0
 
 - [2026-09-28_17-04-19_public-github-dvrweb.md](2026-09-28_17-04-19_public-github-dvrweb.md) — public GitHub repository

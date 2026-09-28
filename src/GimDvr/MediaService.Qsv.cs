@@ -5,8 +5,8 @@ public sealed partial class MediaService
 {
     Task<bool>? qsvProbe;
     internal static string[] LiveVideoArguments(bool qsv,int height)=>qsv
-        ? ["-c:v","h264_qsv","-preset","veryfast","-async_depth","4","-look_ahead","0","-b:v","4000k","-maxrate","4000k","-bufsize","4000k","-low_delay_brc","1","-vf",$"fps=15,scale=-2:{height},format=nv12","-profile:v","baseline","-g","15","-bf","0"]
-        : ["-c:v","libx264","-preset","ultrafast","-tune","zerolatency","-crf","24","-vf",$"fps=15,scale=-2:{height}","-pix_fmt","yuv420p","-profile:v","baseline","-g","15","-keyint_min","15","-sc_threshold","0","-bf","0"];
+        ? ["-c:v","h264_qsv","-preset","veryfast","-async_depth","1","-look_ahead","0","-b:v","4000k","-maxrate","4000k","-bufsize","1000k","-low_delay_brc","1","-vf",$"fps=15,scale=-2:{height},format=nv12","-profile:v","baseline","-g","8","-bf","0"]
+        : ["-c:v","libx264","-preset","ultrafast","-tune","zerolatency","-crf","24","-vf",$"fps=15,scale=-2:{height}","-pix_fmt","yuv420p","-profile:v","baseline","-g","8","-keyint_min","8","-sc_threshold","0","-bf","0"];
     Task<bool> QsvAvailable()=>paths.LiveEncoder.Equals("cpu",StringComparison.OrdinalIgnoreCase)?Task.FromResult(false):qsvProbe??=ProbeQsv();
     async Task<bool> ProbeQsv()
     {

@@ -90,7 +90,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.4.0"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.5.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -128,7 +128,7 @@ app.MapPost("/api/cameras/{id}/control",async(string id,ControlInput input,Store
 {
     await camera.Control(s.Camera(id),input,ct);s.Audit(ctx.User.Identity!.Name!,"camera.control",id+":"+input.Action+":"+input.Value);return Results.Ok(new{accepted=true});
 }).RequireAuthorization("control");
-app.MapPost("/api/cameras/{id}/watch",(string id,Store s,MediaService media)=>{var c=s.Camera(id);if(!c.Enabled)return Results.BadRequest(new{error="กล้องถูกปิดใช้งาน"});media.Watch(id);return Results.Ok(media.Status(id));}).RequireAuthorization();
+app.MapPost("/api/cameras/{id}/watch",(string id,string? mode,Store s,MediaService media)=>{var c=s.Camera(id);if(!c.Enabled)return Results.BadRequest(new{error="กล้องถูกปิดใช้งาน"});if(mode is not null and not "overview" and not "focus")return Results.BadRequest();media.Watch(id,mode=="focus");return Results.Ok(media.Status(id));}).RequireAuthorization();
 app.MapPost("/api/cameras/{id}/ptz",(string id,PtzInput input,Store s,PtzService ptz,HttpContext ctx)=>
 {
     var c=s.Camera(id);if(!c.Enabled||c.Driver!="vstarcam")return Results.BadRequest(new{error="กล้องไม่พร้อมควบคุม"});
@@ -143,6 +143,13 @@ app.MapGet("/api/live/{id}/{name}",(string id,string name,Store s,MediaService m
 {
     ctx.Response.Headers.CacheControl="no-store";
     if(!s.Camera(id).Enabled)return Results.NotFound();var path=media.LiveFile(id,name);
+    if(path is null||!File.Exists(path))return Results.NotFound();
+    return Results.File(new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete),name.EndsWith("m3u8")?"application/vnd.apple.mpegurl":"video/mp2t");
+}).RequireAuthorization();
+app.MapGet("/api/focus/{id}/{name}",(string id,string name,Store s,MediaService media,HttpContext ctx)=>
+{
+    ctx.Response.Headers.CacheControl="no-store";
+    if(!s.Camera(id).Enabled)return Results.NotFound();var path=media.LiveFile(id,name,true);
     if(path is null||!File.Exists(path))return Results.NotFound();
     return Results.File(new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete),name.EndsWith("m3u8")?"application/vnd.apple.mpegurl":"video/mp2t");
 }).RequireAuthorization();

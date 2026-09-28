@@ -1,6 +1,6 @@
 # GimDVR — Agent notes
 
-ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.3.4 (streaming settings จาก 1.3.2)
+ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.5.0 (overview copy / single-camera QSV)
 
 เอกสารนี้สรุป concept และหลักการปัจจุบัน ต้องอ่านคู่กับ [AGENTS.md](AGENTS.md) และ [ดัชนี worklog](worklog/README.md) รายละเอียดการทดลองเก่าไม่ใช่ข้อกำหนดปัจจุบัน เมื่อผู้ใช้เปลี่ยนแนวทางให้แก้สรุปนี้และสร้าง worklog ไฟล์ใหม่
 
@@ -11,23 +11,26 @@
 - จัดการผู้ใช้ admin/operator/viewer เองได้ รหัส admin เริ่มต้นอยู่ใน bootstrap.txt นอก web root; ห้ามคัดลอกรหัสจริงลง note/log/repository ไม่มีข้อบังคับความยาวรหัสผ่าน แต่ต้องไม่ว่าง ยังมี hashing, login throttling และการยกเลิก session เมื่อสิทธิ์เปลี่ยน
 - ทุกกล้องเริ่มต้นไม่บันทึกจนผู้ใช้กำหนด folder และเปิดบันทึกเอง ปัจจุบันตามการตรวจครั้งล่าสุดผู้ใช้เปิดบันทึกทั้งสามกล้องแล้ว ห้ามนำ default ไปทับค่าของผู้ใช้
 
-## ภาพสด: แบบที่ผู้ใช้เลือกสุดท้าย
+## ภาพสด: แบบที่ผู้ใช้เลือกสุดท้าย (1.5.0)
 
 ```text
 Camera RTSP → reader หนึ่งตัวต่อกล้อง → บันทึก MP4 (video copy)
+                                  → Overview HLS (video copy, ไม่มีเสียง)
                                   → loopback MPEG-TS relay
-                                      → shared encoder เฉพาะตอนมีคนดู
-                                          → HLS TS → authenticated web proxy → hls.js
+                                      → shared QSV เฉพาะกล้องที่เปิดโหมดเดี่ยว
+                                          → short-segment HLS → authenticated web proxy
 ```
 
-- ใช้ HLS และ hls.js แบบรุ่น 1.1.2: segment ประมาณ 1 วินาที, playlist 8 ชิ้น, independent keyframes, ชื่อ segment ไม่ซ้ำเมื่อ restart
-- Player: liveSyncDurationCount=2, liveMaxLatencyDurationCount=6, maxBufferLength=5, backBufferLength=4, maxLiveSyncPlaybackRate=1.25 ตามการตั้งค่า HLS เดิม
-- คง on-demand encoding ตามคำสั่งภายหลัง: หนึ่ง encoder ต่อกล้องแชร์ให้ทุกคนดู ไม่เปิด camera connection เพิ่มต่อ viewer; heartbeat ทุก 3 วินาที และหยุด encoder หลังไม่มี lease เกิน 8 วินาที งานบันทึก/reader ทำต่อได้
-- Quick Sync เน้นความไว: h264_qsv, preset veryfast, async_depth=4, lookahead=0, B-frames=0, 1080p/15fps, GOP=15, CBR เป้าหมาย 4 Mbps, maxrate=4 Mbps, VBV=4 Mbit, low_delay_brc=1 อัตราข้อมูลจริงรวมเสียงและ container อาจต่างจากเป้าหมาย
-- ใช้ auto selection พร้อม probe บนเครื่องเจ้าของ media จริง และ CPU fallback เมื่อ QSV ล้มเหลว/หยุดออกข้อมูล CPU fallback คือ libx264 ultrafast/zerolatency/CRF24; ค่า CRF กับ ICQ ไม่เทียบกันตรงตัว
-- มีเพียง video encode ที่ใช้ QSV; decode/scale ยังทำบน CPU ห้ามอ้างว่าเป็น hardware pipeline ทั้งหมด
-- ไม่ใช้ custom framed fMP4 player / realtime.js แล้ว และไม่กลับไปบังคับบัฟเฟอร์ 0.25 วินาทีเพื่อไล่เป้าหมายต่ำกว่า 1 วินาที ความลื่นสำคัญกว่า latency ที่ต่ำแต่กระตุก
-- Snapshot อ่าน TS ที่เสร็จล่าสุดแล้วแปลงเป็น JPEG มี concurrency limit และ timeout ไม่เรียก CGI snapshot ของกล้องที่ส่ง HTTP header ผิดรูปแบบ และไม่เปิด upstream connection ใหม่
+- หน้ารวมใช้ต้นฉบับ H.264 remux เป็น HLS โดย -c:v copy -an ไม่ encode video/resize ลดงาน NAS; browser ยังต้อง decode ภาพเอง งานบันทึก/relay ยังมี AAC encode เดิม ไม่อ้างว่าCPUเป็นศูนย์
+- หน้ารวมมีปุ่มดูเปิด/ปิดเดิมกับชื่อกล้องที่คลิกเข้าโหมดเดี่ยวได้ ไม่มี camera control/settings/snapshot/fullscreen/เสียง; การจัดการกล้องอยู่หน้า management
+- Overview HLS target2s/list6 ตัดตาม keyframe ของกล้อง จึงมีdelayมากกว่าหน้าเดี่ยว; cacheวนขนาดจำกัดสร้างในreaderเดียวกับงานบันทึก ไม่เปิดRTSPใหม่ต่อviewer
+- โหมดเดี่ยวเต็มพื้นที่tab มี Back, เสียง/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมทั้งหมดในtabนี้ก่อนเปิดfocus ไม่แก้ค่าการดูที่จำไว้
+- Focusแยกleaseและendpoint/api/focusจากoverview/api/live; QSVเปิดเฉพาะfocusและแชร์ต่อกล้อง/viewers หยุดหลังไม่มีlease8s การดูoverviewไม่ยืดอายุencoder; readerยังบันทึกได้
+- QSV veryfast, async_depth1, lookahead0, Bframes0, 1080p15fps, GOP8 (~0.533s), target/max4Mbps, VBV1Mbit, low_delay_brc1; decode/scaleยังCPU; probeและCPUfallbackultrafast/zerolatencyยังอยู่และหน้าเดี่ยวบอกencoderจริง
+- Focus HLS target0.5s/list12 (NASจริง0.533333s); player liveSync0.7s, maxLatency2s, maxBuffer1.5s, backBuffer1s, catchup≤1.1x เป็นclassicHLSsegmentสั้น ไม่ใช่LL-HLS partial segments และไม่รับประกันcamera-to-screen<1s
+- หนึ่งencoderต่อกล้องที่ถูกfocus ไม่ใช่global one-camera lock; คนละtab/userเลือกคนละกล้องได้ และswitchอาจoverlapช่วงgrace
+- Snapshotใช้overviewTSล่าสุดแล้วJPEG ไม่เริ่มfocusencoderเพิ่ม; recordingargumentsเดิมคงไว้
+- Source/FFmpeg checksและbrowserผ่านlocalNAS-cache harnessแล้ว ไม่ใช่authenticatedproductionloginหรือphysicalAndroidtest รายละเอียด: [worklog](worklog/2026-09-28_18-04-54_overview-copy-and-focus-qsv.md)
 
 ## การบันทึกและดูย้อนหลัง
 
@@ -39,7 +42,7 @@ Camera RTSP → reader หนึ่งตัวต่อกล้อง → บ�
 
 ## กล้องและ UI
 
-- ภาพสดเล่นอัตโนมัติ ปิดเสียงเริ่มต้น และมีเฉพาะปุ่มเปิด/ปิดเสียงกับเต็มจอ ไม่มี native timeline/play/pause/speed/PiP; fullscreen ใช้ wrapper เพื่อคงสองปุ่ม ตัวควบคุมถอด listeners เมื่อออกจากหน้า ส่วนดูย้อนหลังยังมี controls ตามเดิม ([worklog](worklog/2026-09-28_16-58-45_live-video-minimal-controls.md))
+- ภาพสดเล่นอัตโนมัติ ปิดเสียงเริ่มต้น ไม่มี native timeline/play/pause/speed/PiP; หน้ารวมมีเฉพาะview toggle/ชื่อกล้อง ส่วนเสียง/fullscreen/controlอยู่ในโหมดเดี่ยว ตัวควบคุมถอด listeners เมื่อออกจากหน้า ส่วนดูย้อนหลังยังมี controls ตามเดิม ([worklog](worklog/2026-09-28_16-58-45_live-video-minimal-controls.md))
 
 - แผง control ลอย ลากและปรับขนาดได้ ไม่บังภาพทั้งจอ PTZ กดค้าง/ปล่อยเพื่อหยุด มี heartbeat, ป้องกันคำสั่งเก่า และ server stop timeout 650 ms
 - รองรับ IR, microphone/speaker volume และ motion ตามความสามารถจริง คำสั่งตอบรับไม่ใช่หลักฐานว่ามอเตอร์/ลำโพงทำงานจริง
@@ -86,3 +89,7 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 - แนวตั้งเรียงกล้องลงมา; fullscreen เป็น native landscape + CSS wrapper มี control dialog ลากได้ ต้องย้าย dialog กลับ body ก่อนลบ card เสมอ
 - APK net.gimgim.gimdvr, Android8+, arm64/arm/x64; ใช้ deployment/Build-Android.ps1 กับ signing key เดิมที่ .local-data/android-signing ห้าม commit key/pass/APK และต้อง apksigner verify ทุก build
 - Web/backend fixture, NAS health/hash และ APK signature ผ่าน; ยังไม่มีการติดตั้ง/หมุนจอ/ทดสอบ cookie บนอุปกรณ์ Android จริง ([worklog](worklog/2026-09-28_17-23-45_android-and-per-camera-viewing.md))
+
+## ขอบเขตการทดสอบตามคำสั่งผู้ใช้ล่าสุด
+
+ตั้งแต่ 2026-09-28T18:05:36.704868+07:00 ทดสอบเฉพาะ smoke test / functional test ของโค้ด ไม่เปิดหน้าเว็บจริง ไม่ทดสอบbrowserหรือbrowser harness เว้นแต่ผู้ใช้สั่งให้ทดสอบโดยชัดเจน ใช้localcode/backendfixtures และตรวจไฟล์/hashการdeployได้ ผลbrowserก่อนหน้านี้เป็นประวัติ ไม่ใช่สิทธิ์ให้ทดสอบซ้ำ ([worklog](worklog/2026-09-28_18-05-36_code-tests-only-policy.md))
