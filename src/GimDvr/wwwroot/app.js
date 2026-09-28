@@ -25,7 +25,7 @@ function showOverview(){history.pushState({},'',location.pathname+location.searc
 window.addEventListener('popstate',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('camera');if(me)navigate(id?'single':'live',id).catch(e=>toast(e.message));});
 function renderLive(){
  document.body.classList.remove('single-view');
- $('#main').innerHTML=title('ภาพสด','ควบคุมแต่ละกล้อง หรือเลือกชื่อกล้องเพื่อดูเดี่ยว')+`<div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="single-top"><button data-back-overview>← กล้องทั้งหมด</button><h2>${esc(c.name)}</h2><span class="single-mode">ภาพสดต่อเนื่อง · ไม่มีเสียง</span></div><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 3v9M6.34 5.66a8 8 0 1 0 11.32 0"/></svg></button><h3><button class="camera-open" data-open-camera="${esc(c.id)}" ${c.enabled?'':'disabled'}>${esc(c.name)} ↗</button></h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}">${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'&&c.enabled?`<button data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button data-live-fullscreen aria-label="เต็มจอ">⛶</button></div><div class="video-status">${!c.enabled?'ปิดใช้งานกล้อง':isViewing(c.id)?'กำลังเชื่อมต่อ…':'ปิดการดูภาพ'}</div></div>${me.role!=='viewer'&&c.enabled?`<div class="camera-bottom"><button data-control="${esc(c.id)}">ควบคุม ↗</button></div>`:''}</article>`).join('')}</div><p class="note">ทุกโหมดส่งภาพต่อเนื่องโดยไม่เข้ารหัสใหม่ · สตรีมภาพไม่มีเสียง · เลือกชื่อกล้องเพื่อดูเดี่ยว</p>`;
+ $('#main').innerHTML=title('ภาพสด','ควบคุมแต่ละกล้อง หรือเลือกชื่อกล้องเพื่อดูเดี่ยว')+`<div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="single-top"><button data-back-overview>← กล้องทั้งหมด</button><h2>${esc(c.name)}</h2></div><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 3v9M6.34 5.66a8 8 0 1 0 11.32 0"/></svg></button><h3><button class="camera-open" data-open-camera="${esc(c.id)}" ${c.enabled?'':'disabled'}>${esc(c.name)} ↗</button></h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}">${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'&&c.enabled?`<button data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button data-live-fullscreen aria-label="เต็มจอ">⛶</button></div><div class="video-status">${c.enabled&&isViewing(c.id)?'buffering':''}</div></div>${me.role!=='viewer'&&c.enabled?`<div class="camera-bottom"><button data-control="${esc(c.id)}">ควบคุม ↗</button></div>`:''}</article>`).join('')}</div>`;
  document.querySelectorAll('[data-open-camera]').forEach(b=>b.onclick=()=>openSingle(b.dataset.openCamera));
  document.querySelectorAll('[data-view-toggle]').forEach(b=>b.onclick=()=>toggleViewing(b.dataset.viewToggle));
  document.querySelectorAll('[data-back-overview]').forEach(b=>b.onclick=showOverview);
@@ -44,25 +44,25 @@ function applyLiveLayout(id){
   card.dataset.viewing=String(focused||isViewing(card.dataset.id)&&cameras.find(c=>c.id===card.dataset.id)?.enabled);
  });
  // A camera explicitly disabled in overview is only opened temporarily for single view.
- cameras.filter(c=>c.id!==selected?.id&&!isViewing(c.id)).forEach(c=>{liveSessions.get(c.id)?.destroy();liveMessage(c.id,'ปิดการดูภาพ');});
+ cameras.filter(c=>c.id!==selected?.id&&!isViewing(c.id)).forEach(c=>{liveSessions.get(c.id)?.destroy();liveMessage(c.id,'');});
  if(selected){
   if(!liveSessions.has(selected.id))connectLive(selected,'focus').catch(e=>liveMessage(selected.id,e.message));
   if(me.role!=='viewer'){document.querySelector('.single-camera .video-wrap').appendChild($('#controls'));showControls(selected);}
  }
 }
-function liveMessage(id,text){const card=document.querySelector(`.camera-card[data-id="${id}"]`);if(card)card.querySelector('.video-status').textContent=text;}
+function liveMessage(id,text){const card=document.querySelector(`.camera-card[data-id="${id}"]`);if(card)card.querySelector('.video-status').textContent=text==='live'?'live':text?'buffering':'';}
 function toggleViewing(id){
  const c=cameras.find(c=>c.id===id);if(!c?.enabled)return;
  viewPrefs[id]=!isViewing(id);saveViewPrefs();const viewing=isViewing(id);
  const card=document.querySelector(`.camera-card[data-id="${id}"]`);card.dataset.viewing=String(viewing);
  card.querySelector('[data-view-toggle]').setAttribute('aria-checked',String(viewing));
  if(viewing)connectLive(c).catch(e=>liveMessage(id,e.message));
- else{liveSessions.get(id)?.destroy();liveMessage(id,'ปิดการดูภาพ');}
+ else{liveSessions.get(id)?.destroy();liveMessage(id,'');}
 }
 async function connectLive(c,mode='overview'){
  liveSessions.get(c.id)?.destroy();const video=document.getElementById(`v-${c.id}`);if(!video||(mode==='overview'&&!isViewing(c.id)))return;
  let active=true,hls=null,heartbeat=null,retry=null;
- const playing=()=>liveMessage(c.id,'● LIVE · ส่งต่อวิดีโอโดยไม่ encode'),waiting=()=>liveMessage(c.id,'กำลังรอภาพ…');
+ const playing=()=>liveMessage(c.id,'live'),waiting=()=>liveMessage(c.id,'buffering');
  const session={destroy(){if(!active)return;active=false;clearInterval(heartbeat);clearTimeout(retry);hls?.destroy();video.removeEventListener('playing',playing);video.removeEventListener('waiting',waiting);video.removeAttribute('src');video.load();if(liveSessions.get(c.id)===session)liveSessions.delete(c.id);}};
  liveSessions.set(c.id,session);video.addEventListener('playing',playing);video.addEventListener('waiting',waiting);
  const watch=()=>api(`cameras/${c.id}/watch?mode=overview`,'POST');

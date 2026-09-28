@@ -28,11 +28,11 @@ function startCopyStream(video,id,onStatus){
   while(!disposed){
    const controller=new AbortController();attempt=controller;let buffer=null,started=false,rebuffer=false,lastData=Date.now(),reader=null;let watchdog;
    const source=new MediaSource();url=URL.createObjectURL(source);video.src=url;video.muted=true;video.autoplay=false;video.playbackRate=1;
-   const waiting=()=>{if(started){rebuffer=true;onStatus('กำลังรอข้อมูลภาพ…');}};
+   const waiting=()=>{if(started){rebuffer=true;onStatus('buffering');}};
    video.addEventListener('waiting',waiting);
    try{
     await new Promise((resolve,reject)=>{const clean=()=>{source.removeEventListener('sourceopen',opened);controller.signal.removeEventListener('abort',aborted);};const opened=()=>{clean();resolve();},aborted=()=>{clean();reject(Error('closed'));};source.addEventListener('sourceopen',opened);controller.signal.addEventListener('abort',aborted,{once:true});if(controller.signal.aborted)aborted();});
-    onStatus('กำลังรอ keyframe เพื่อเริ่มภาพสด…');
+    onStatus('buffering');
     watchdog=setInterval(()=>{if(Date.now()-lastData>(started?10000:30000))controller.abort();},1000);
     const response=await fetch(`api/cameras/${encodeURIComponent(id)}/copy-stream`,{signal:controller.signal,cache:'no-store'});
     if(!response.ok)throw Error(`Stream HTTP ${response.status}`);
@@ -54,10 +54,10 @@ function startCopyStream(video,id,onStatus){
      if(rebuffer&&end-video.currentTime<0.2)continue;
      rebuffer=false;video.playbackRate=end-video.currentTime>0.9?1.05:1;
      if(video.paused)video.play().catch(()=>{});
-     onStatus('● LIVE · ส่งต่อภาพต่อเนื่อง ไม่ encode');
+     onStatus('live');
      if(video.currentTime>4&&buffer.buffered.start(0)<video.currentTime-4)await update(()=>buffer.remove(0,video.currentTime-3));
     }
-   }catch(e){if(!disposed)onStatus(`เชื่อมต่อใหม่: ${e.message}`);}
+   }catch(e){if(!disposed)onStatus('buffering');}
    finally{
     clearInterval(watchdog);controller.abort();reader?.cancel().catch(()=>{});video.removeEventListener('waiting',waiting);
     if(url){URL.revokeObjectURL(url);url=null;}

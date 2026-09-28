@@ -21,3 +21,5 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 .apk-download{color:var(--mint);font-size:12px;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}.apk-download-row{text-align:center;margin-top:18px}.header-right>.apk-download{padding:8px}.android-app .apk-download,.android-app .apk-download-row{display:none}
 
 .view-toggle{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}.view-toggle svg{display:block;pointer-events:none}
+
+.video-status:empty{display:none}
