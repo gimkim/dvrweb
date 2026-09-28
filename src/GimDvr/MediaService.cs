@@ -54,7 +54,8 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         var file=Path.Combine(paths.Runtime,c.Id+".json");File.WriteAllText(file+".tmp",JsonSerializer.Serialize(state));File.Move(file+".tmp",file,true);
     }
     public int? WebRtcPort(string id)=>paths.ExternalMedia?ReadShared(id)?.WebRtcPort:runs.TryGetValue(id,out var run)&&!run.Process.HasExited?run.WebRtcPort:null;
-    public static string[] WebRtcRelayArguments(int port)=>["-map","0:v:0","-c:v","copy","-an","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{port}?pkt_size=1316"];
+    public static string[] InputClockArguments(bool arrivalClock)=>arrivalClock?["-use_wallclock_as_timestamps","1"]:["-fflags","+genpts"];
+    public static string[] WebRtcRelayArguments(int port,int clockFps=0)=>["-map","0:v:0","-c:v","copy","-an",..(clockFps>0?new[]{"-bsf:v",$"setts=ts=STARTPTS+N/({clockFps}*TB):duration=1/({clockFps}*TB)"}:Array.Empty<string>()),"-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{port}?pkt_size=1316"];
     public object Status(string id)
     {
         if(paths.ExternalMedia)
@@ -125,13 +126,13 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         var live=Path.Combine(paths.Live,c.Id,session);Directory.CreateDirectory(live);
         var info=new ProcessStartInfo(paths.Ffmpeg){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardInput=true,RedirectStandardOutput=true};
         void Add(params string[] a){foreach(var v in a)info.ArgumentList.Add(v);}
-        Add("-hide_banner","-loglevel","error","-nostats","-fflags","+genpts","-rtsp_transport","tcp","-timeout","10000000","-i",cameras.Rtsp(c));
+        Add("-hide_banner","-loglevel","error","-nostats");Add(InputClockArguments(paths.ArrivalClock(c.Id)));Add("-rtsp_transport","tcp","-timeout","10000000","-i",cameras.Rtsp(c));
         using var socket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
         var relayPort=((System.Net.IPEndPoint)socket.Client.LocalEndPoint!).Port;socket.Close();
         Add("-map","0:v:0","-map","0:a:0?","-c:v","copy","-c:a","aac","-ar","16000","-ac","1","-b:a","48k","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{relayPort}?pkt_size=1316");
         using var rtcSocket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
         var rtcPort=((System.Net.IPEndPoint)rtcSocket.Client.LocalEndPoint!).Port;rtcSocket.Close();
-        Add(WebRtcRelayArguments(rtcPort));
+        Add(WebRtcRelayArguments(rtcPort,paths.ArrivalClock(c.Id)?paths.WebRtcClockFps:0));
         Add(OverviewArguments(live));
         var segmentMs=store.StreamSettings().SegmentMs;Add(FragmentCache.Arguments(segmentMs));
         Manifest? manifest=null;

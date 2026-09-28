@@ -23,13 +23,15 @@ function copyVideoCodec(init){
 function startCopyStream(video,id,onStatus){
  if(typeof MediaSource==='undefined')throw Error('เบราว์เซอร์นี้ไม่รองรับสตรีมต่อเนื่อง');
  let disposed=false,attempt=null,url=null,wake=null;
+ const diag={startedAt:Date.now(),firstPlayingMs:null,waits:0,plays:0,packets:0,maxPacketGapMs:0,seeks:0,restarts:0};let lastPacketAt=0,lastReport=0;
+ const report=()=>{if(Date.now()-lastReport<1000)return;lastReport=Date.now();const q=video.getVideoPlaybackQuality?.();video.dataset.copyDiagnostics=JSON.stringify({...diag,currentTime:video.currentTime,paused:video.paused,readyState:video.readyState,frames:q?.totalVideoFrames,dropped:q?.droppedVideoFrames,at:Date.now()});};
  const retryDelay=()=>new Promise(resolve=>{const timer=setTimeout(()=>{wake=null;resolve();},500);wake=()=>{clearTimeout(timer);wake=null;resolve();};});
  async function run(){
   while(!disposed){
    const controller=new AbortController();attempt=controller;let buffer=null,started=false,rebuffer=false,lastData=Date.now(),reader=null;let watchdog,lastTrim=0;
    const source=new MediaSource();url=URL.createObjectURL(source);video.src=url;video.muted=true;video.autoplay=false;video.playbackRate=1;
-   const waiting=()=>{if(started){rebuffer=true;video.pause();video.playbackRate=1;onStatus('buffering');}};
-   const playing=()=>{if(!rebuffer&&!disposed)onStatus('live');};
+   const waiting=()=>{if(started&&!rebuffer){diag.waits++;report();rebuffer=true;video.pause();video.playbackRate=1;onStatus('buffering');}};
+   const playing=()=>{diag.plays++;diag.firstPlayingMs??=Date.now()-diag.startedAt;report();if(!rebuffer&&!disposed)onStatus('live');};
    video.addEventListener('waiting',waiting);video.addEventListener('playing',playing);
    try{
     await new Promise((resolve,reject)=>{const clean=()=>{source.removeEventListener('sourceopen',opened);controller.signal.removeEventListener('abort',aborted);};const opened=()=>{clean();resolve();},aborted=()=>{clean();reject(Error('closed'));};source.addEventListener('sourceopen',opened);controller.signal.addEventListener('abort',aborted,{once:true});if(controller.signal.aborted)aborted();});
@@ -49,7 +51,7 @@ function startCopyStream(video,id,onStatus){
     }
     await update(()=>buffer.appendBuffer(init));
     while(!disposed&&!controller.signal.aborted){
-     const data=await packets.next();lastData=Date.now();await update(()=>buffer.appendBuffer(data));
+     const data=await packets.next();lastData=Date.now();diag.packets++;if(lastPacketAt)diag.maxPacketGapMs=Math.max(diag.maxPacketGapMs,lastData-lastPacketAt);lastPacketAt=lastData;await update(()=>buffer.appendBuffer(data));
      if(!buffer.buffered.length)continue;
      // Use the range containing the playhead, not a newer disjoint range on every append.
      const ranges=buffer.buffered;let range=-1;
@@ -62,13 +64,13 @@ function startCopyStream(video,id,onStatus){
       // Recover a real timestamp gap only once enough data exists beyond it.
       range=ranges.length-1;const start=ranges.start(range),end=ranges.end(range);
       if(end-start+0.001<resumeReserve)continue;
-      video.currentTime=Math.max(start,end-resumeReserve);
+      diag.seeks++;video.currentTime=Math.max(start,end-resumeReserve);
      }
-     const end=ranges.end(range),ahead=end-video.currentTime;
+     const end=ranges.end(range),ahead=end-video.currentTime;diag.aheadMs=Math.round(ahead*1000);diag.ranges=ranges.length;report();
      if(rebuffer&&ahead+0.001<resumeReserve)continue;
      const reserve=rebuffer?resumeReserve:steadyReserve;
      rebuffer=false;
-     if(ahead>Math.max(2,reserve+1.7))video.currentTime=Math.max(ranges.start(range),end-reserve);
+     if(ahead>Math.max(2,reserve+1.7)){diag.seeks++;video.currentTime=Math.max(ranges.start(range),end-reserve);}
      video.playbackRate=end-video.currentTime>Math.max(0.9,steadyReserve+0.6)?1.05:1;
      if(video.paused)video.play().catch(()=>{});
      // Do not churn decoder eviction on each fragment. Keep a larger decoded history.
@@ -76,7 +78,7 @@ function startCopyStream(video,id,onStatus){
       await update(()=>buffer.remove(0,video.currentTime-30));lastTrim=video.currentTime;
      }
     }
-   }catch(e){if(!disposed)onStatus('buffering');}
+   }catch(e){if(!disposed){diag.restarts++;diag.error=e.message;report();onStatus('buffering');}}
    finally{
     clearInterval(watchdog);controller.abort();reader?.cancel().catch(()=>{});video.removeEventListener('waiting',waiting);video.removeEventListener('playing',playing);
     if(url){URL.revokeObjectURL(url);url=null;}

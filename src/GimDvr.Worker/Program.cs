@@ -11,6 +11,7 @@ builder.Services.AddWindowsService(o=>o.ServiceName="GimDvrRecorder");
 var env=new WorkerEnvironment{ContentRootPath=AppContext.BaseDirectory};
 var paths=new Paths(builder.Configuration,env);
 builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"detection-remote.json"),optional:true,reloadOnChange:false);
+builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"live-clock.json"),optional:true,reloadOnChange:false);
 builder.Services.AddSingleton(paths);
 builder.Services.AddDataProtection().SetApplicationName("GimDvr").PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Data,"keys")));
 builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraClient>();builder.Services.AddHostedService<MediaService>();

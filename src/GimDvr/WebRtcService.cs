@@ -15,8 +15,9 @@ public sealed class WebRtcService(Store store,MediaService media,Paths paths,ILo
     readonly SemaphoreSlim gate=new(1),slots=new(64);
     volatile bool ready;
     Process? gateway;
+    string? lastGatewayWarning;
     public object Status()=>new{ready,activeSessions=sessions.Count};
-    void PublishStatus(){try{var file=Path.Combine(paths.Runtime,"webrtc-state.json");File.WriteAllText(file+".tmp",JsonSerializer.Serialize(new{updated=DateTimeOffset.UtcNow,ready,activeSessions=sessions.Count,version="1.21.1",processId=gateway?.Id}));File.Move(file+".tmp",file,true);}catch(IOException){}}
+    void PublishStatus(){try{var file=Path.Combine(paths.Runtime,"webrtc-state.json");File.WriteAllText(file+".tmp",JsonSerializer.Serialize(new{updated=DateTimeOffset.UtcNow,ready,activeSessions=sessions.Count,version="1.21.1",processId=gateway?.Id,lastGatewayWarning}));File.Move(file+".tmp",file,true);}catch(IOException){}}
     sealed class Session(string user,string stamp,string camera,int port,Uri upstream){public string User=user,Stamp=stamp,Camera=camera;public int Port=port;public Uri Upstream=upstream;public long Seen=Environment.TickCount64;}
     public static bool ValidOffer(string? sdp)=>sdp is {Length:>0 and <=100000}&&sdp.StartsWith("v=0")&&sdp.Contains("m=video ")&&sdp.Contains("a=recvonly")&&!sdp.Contains("a=sendonly")&&!sdp.Contains("a=sendrecv");
     public static Uri SessionLocation(string camera,Uri? location){
@@ -67,14 +68,14 @@ public sealed class WebRtcService(Store store,MediaService media,Paths paths,ILo
         if(!File.Exists(exe)){log.LogWarning("WebRTC gateway binary missing; copy fallback remains available");return;}
         Directory.CreateDirectory(paths.Runtime);var config=Path.Combine(paths.Runtime,"mediamtx.json");
         await File.WriteAllTextAsync(config,JsonSerializer.Serialize(new{
-            logLevel="warn",logDestinations=new[]{"stdout"},api=true,apiAddress="127.0.0.1:19997",rtsp=false,rtmp=false,hls=false,srt=false,moq=false,
+            logLevel="warn",logDestinations=new[]{"stdout"},udpReadBufferSize=4194304,writeQueueSize=2048,api=true,apiAddress="127.0.0.1:19997",rtsp=false,rtmp=false,hls=false,srt=false,moq=false,
             webrtc=true,webrtcAddress="127.0.0.1:18889",webrtcLocalUDPAddress=":8189",webrtcLocalTCPAddress=":8189",webrtcIPsFromInterfaces=true,webrtcAdditionalHosts=new[]{"gimgim.ddns.net"},
             authInternalUsers=new[]{new{user="any",pass="",ips=new[]{"127.0.0.1"},permissions=new[]{new{action="read",path=""},new{action="api",path=""}}}},paths=new Dictionary<string,object>()}),ct);
         while(!ct.IsCancellationRequested){
             using var process=new Process{StartInfo=new(exe){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}};IDisposable? job=null;
             try{
                 process.StartInfo.ArgumentList.Add(config);process.Start();gateway=process;job=ProcessJob.Attach(process);
-                process.OutputDataReceived+=(_,e)=>{if(e.Data is not null)log.LogWarning("WebRTC gateway reported a warning");};process.ErrorDataReceived+=(_,e)=>{if(e.Data is not null)log.LogWarning("WebRTC gateway reported an error");};process.BeginOutputReadLine();process.BeginErrorReadLine();
+                process.OutputDataReceived+=(_,e)=>{if(e.Data is not null){lastGatewayWarning=System.Text.RegularExpressions.Regex.Replace(e.Data.Length>512?e.Data[..512]:e.Data,@"[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}","[id]");log.LogWarning("WebRTC gateway reported a warning");}};process.ErrorDataReceived+=(_,e)=>{if(e.Data is not null)log.LogWarning("WebRTC gateway reported an error");};process.BeginOutputReadLine();process.BeginErrorReadLine();
                 await gate.WaitAsync(ct);try{registered.Clear();}finally{gate.Release();}
                 for(int i=0;i<30&&!process.HasExited;i++){try{using var r=await http.GetAsync("http://127.0.0.1:19997/v3/config/global/get",ct);if(r.IsSuccessStatusCode){ready=true;break;}}catch(HttpRequestException){}await Task.Delay(200,ct);}
                 log.LogInformation("WebRTC gateway ready={Ready}",ready);

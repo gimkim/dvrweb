@@ -1,5 +1,5 @@
 // Deterministic MSE lifecycle fixture; no browser, device, camera or HTTP access.
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {startCopyStream}=require('../src/GimDvr/wwwroot/copy-stream.js');
 class Events {constructor(){this.events=new Map();}addEventListener(k,f){if(!this.events.has(k))this.events.set(k,new Set());this.events.get(k).add(f);}removeEventListener(k,f){this.events.get(k)?.delete(f);}emit(k){for(const f of [...this.events.get(k)||[]])f();}}
 const turns=async()=>{for(let i=0;i<12;i++)await new Promise(r=>setImmediate(r));};
@@ -9,11 +9,14 @@ const init=fs.readFileSync(path.join('artifacts',fixture,'cache','init.mp4'));
 let sb,ms,reads=[],resolveRead,ranges=[],nextRanges=[],cancels=0;
 const reader={read(){return reads.length?Promise.resolve({value:reads.shift(),done:false}):new Promise(r=>resolveRead=r);},cancel(){cancels++;resolveRead?.({done:true});return Promise.resolve();}};
 function send(data){const value=frame(data);if(resolveRead){const r=resolveRead;resolveRead=null;r({value,done:false});}else reads.push(value);}
-class BufferMock extends Events {constructor(){super();this.removed=[];this.appends=0;this.buffered={get length(){return ranges.length;},start:i=>ranges[i][0],end:i=>ranges[i][1]};}appendBuffer(data){this.appends++;if(data.length===1)ranges=nextRanges;queueMicrotask(()=>this.emit('updateend'));}remove(a,b){this.removed.push([a,b]);queueMicrotask(()=>this.emit('updateend'));}}
+class BufferMock extends Events {constructor(){super();this.removed=[];this.appends=0;this.buffered={get length(){return ranges.length;},start:i=>ranges[i][0],end:i=>ranges[i][1]};}appendBuffer(data){this.appends++;if(data.length===1)ranges=nextRanges;queueMicrotask(()=>{this.emit('updateend');video.emit('canplay');});}remove(a,b){this.removed.push([a,b]);queueMicrotask(()=>this.emit('updateend'));}}
 global.MediaSource=class extends Events {constructor(){super();ms=this;queueMicrotask(()=>this.emit('sourceopen'));}static isTypeSupported(){return true;}addSourceBuffer(){sb=new BufferMock();return sb;}};
 global.URL.createObjectURL=()=> 'blob:fixture';global.URL.revokeObjectURL=()=>{};
 global.fetch=async(url,{signal})=>{signal.addEventListener('abort',()=>resolveRead?.({done:true}),{once:true});return {ok:true,headers:{get:n=>({'X-Startup-Ms':'900','X-Rebuffer-Ms':'600','X-Live-Target-Ms':'200'})[n]},body:{getReader:()=>reader}};};
-const video=new Events();Object.assign(video,{currentTime:0,paused:true,playCalls:0,pause(){this.paused=true;},play(){this.playCalls++;this.paused=false;this.emit('playing');return Promise.resolve();}});
+const video=new Events();Object.assign(video,{dataset:{},isConnected:true,readyState:4,currentTime:0,paused:true,playCalls:0,pause(){if(!this.paused){this.paused=true;this.emit('pause');}},play(){this.playCalls++;this.paused=false;this.emit('playing');return Promise.resolve();}});
+const doc=new Events();doc.getElementById=()=>null;
+const full={setAttribute(){}};const wrap={querySelector:q=>q==='video'?video:q==='[data-live-fullscreen]'?full:null,closest:()=>({dataset:{viewing:'true'}}),contains:()=>false};
+const controls=vm.runInNewContext(fs.readFileSync('src/GimDvr/wwwroot/live-controls.js','utf8')+';bindLiveControls(wrap)',{document:doc,window:{},wrap,Event});
 const statuses=[];const player=startCopyStream(video,'fixture',s=>statuses.push(s));
 async function append(r){nextRanges=r;send(Buffer.from([1]));await turns();}
 (async()=>{try{
@@ -42,6 +45,6 @@ async function append(r){nextRanges=r;send(Buffer.from([1]));await turns();}
  assert.ok(sb.removed.length>0&&sb.removed.length<=12);for(const [a,b] of sb.removed){assert.equal(a,0);assert.ok(b>100);}
  console.log('PASS400 successive150ms fragments preserve playhead, speed and play state; history eviction is throttled');
  player.destroy();await turns();assert.equal(video.events.get('waiting').size,0);assert.equal(video.events.get('playing').size,0);assert.equal(cancels,1);
- console.log('PASS destroy cancels reader and removes player listeners');
+ controls.destroy();console.log('PASS destroy cancels reader and removes player listeners; controls respect player pause/canplay ownership');
  }finally{player.destroy();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

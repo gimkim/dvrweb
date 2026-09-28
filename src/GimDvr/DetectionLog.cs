@@ -31,7 +31,7 @@ public sealed class DetectionLog
             {
                 day=today;current=Path.Combine(directory,$"detection-{today}-{Environment.ProcessId}-{runId[..8]}-{sequence++:D4}.jsonl");
             }
-            var line=JsonSerializer.Serialize(new{timeUtc=now,kind,version="1.10.0",pid=Environment.ProcessId,runId,data},Json);
+            var line=JsonSerializer.Serialize(new{timeUtc=now,kind,version="1.10.1",pid=Environment.ProcessId,runId,data},Json);
             File.AppendAllText(current,line+"\n",new UTF8Encoding(false));
             var files=new DirectoryInfo(directory).EnumerateFiles("detection-*.jsonl")
                 .Where(f=>Regex.IsMatch(f.Name,@"^detection-\d{8}-\d+-[a-f0-9]{8}-\d{4,}\.jsonl$"))

@@ -117,3 +117,5 @@ Live buffering now pauses to accumulate the configured rebuffer reserve before r
 ## WebRTC live (1.10.0)
 
 Web and Android now prefer shared copy-only WebRTC via NAS MediaMTX, with automatic fMP4 fallback. Existing recordings are unchanged. See [network setup, security, tests and limits](docs/webrtc.md). NAS firewall TCP+UDP8189 and router forwarding for Internet use must be configured; HTTPS alone does not carry peer media.
+
+1.10.1 corrects verified camera clock pacing through an optional external allowlist, removes conflicting live-control autoplay, and requests400ms WebRTC jitter reserve. See docs/webrtc.md and the latest worklog for measured playback and remaining validation limits.

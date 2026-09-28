@@ -105,3 +105,5 @@
 - [2026-09-28_22-26-56_live-transport-options.md](2026-09-28_22-26-56_live-transport-options.md) — advisory WebRTC alternative to fMP4
 
 - [2026-09-28_22-42-05_webrtc-live-transport.md](2026-09-28_22-42-05_webrtc-live-transport.md) — WebRTC-first shared live streams with fMP4 fallback
+
+- [2026-09-28_23-20-00_webrtc-firewall-clock-playback.md](2026-09-28_23-20-00_webrtc-firewall-clock-playback.md) � firewall confirmation, camera timestamp correction and actual WebRTC playback tests

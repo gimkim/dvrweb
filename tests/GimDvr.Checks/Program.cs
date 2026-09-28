@@ -159,7 +159,10 @@ Check(WebRtcService.ValidOffer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=recvo
 Check(!WebRtcService.ValidOffer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=sendrecv\r\n")&&!WebRtcService.ValidOffer(new string('x',100001)),"WebRTC publishing and oversized offers rejected");
 var secret=Guid.NewGuid().ToString();Check(WebRtcService.SessionLocation("a",new Uri("/a/whep/"+secret,UriKind.Relative)).Host=="127.0.0.1","WebRTC session location restricted to local gateway");
 foreach(var bad in new[]{"http://evil.invalid/a/whep/"+secret,"http://127.0.0.1:18889/b/whep/"+secret,"/a/whep/"+secret+"?x=1"}){bool rejected=false;try{WebRtcService.SessionLocation("a",new Uri(bad,UriKind.RelativeOrAbsolute));}catch(IOException){rejected=true;}Check(rejected,"WebRTC foreign or mismatched session location rejected");}
+Check(MediaService.WebRtcRelayArguments(12345,15).Contains("setts=ts=STARTPTS+N/(15*TB):duration=1/(15*TB)"),"opt-in WebRTC clock regularizes packets without encoding");
 var relay=MediaService.WebRtcRelayArguments(12345);Check(relay.Contains("copy")&&relay.Contains("-an")&&relay[^1]=="udp://127.0.0.1:12345?pkt_size=1316"&&!relay.Contains("-i"),"WebRTC video-only copy relay adds no camera input or encoder");
+Check(MediaService.InputClockArguments(true).SequenceEqual(new[]{"-use_wallclock_as_timestamps","1"}),"arrival-clock opt-in replaces bad camera timestamps without encoding");
+Check(MediaService.InputClockArguments(false).SequenceEqual(new[]{"-fflags","+genpts"}),"unconfigured cameras retain original clock policy");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {
@@ -172,4 +175,3 @@ sealed class Env(string root):IWebHostEnvironment
  public string WebRootPath{get;set;}=Path.Combine(root,"wwwroot");public IFileProvider WebRootFileProvider{get;set;}=new NullFileProvider();
  public string ContentRootPath{get;set;}=root;public IFileProvider ContentRootFileProvider{get;set;}=new NullFileProvider();
 }
-
