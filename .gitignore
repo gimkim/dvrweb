@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+artifacts/
+.local-data/
+evidence/
+**/bootstrap.txt
+**/seed-cameras.json
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/appsettings.Development.json
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/keys/
+*.user

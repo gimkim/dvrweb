@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+ <PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+ <ItemGroup><ProjectReference Include="../GimDvr/GimDvr.csproj"/><PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12"/></ItemGroup>
+</Project>
