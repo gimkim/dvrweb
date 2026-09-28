@@ -29,6 +29,20 @@ finally{using var stop=new CancellationTokenSource(TimeSpan.FromSeconds(15));awa
 if(result is not {State:"complete",Motion:false,Human:false,Frames:12,HumanSamples:2})throw new Exception("Unexpected synthetic result: "+System.Text.Json.JsonSerializer.Serialize(result));
 Console.WriteLine("PASS FFmpeg -> actual OpenVINO -> JSON worker -> SQLite -> recording projection: "+result.Device+" / "+result.Decoder);
 using(var gate=File.Open(Path.Combine(paths.Runtime,"detection.lock"),FileMode.Open,FileAccess.ReadWrite,FileShare.None))Console.WriteLine("PASS shutdown releases analysis owner lock");
+var logs=Directory.GetFiles(Path.Combine(root,"logs","detection"),"*.jsonl").SelectMany(File.ReadAllLines).Select(l=>System.Text.Json.JsonDocument.Parse(l)).ToList();
+if(!logs.Any(j=>j.RootElement.GetProperty("kind").GetString()=="clip_finish")||!logs.Any(j=>j.RootElement.GetProperty("kind").GetString()=="summary"))throw new Exception("Missing throughput log");
+var finished=logs.First(j=>j.RootElement.GetProperty("kind").GetString()=="clip_finish").RootElement.GetProperty("data");
+if(finished.GetProperty("elapsedSeconds").GetDouble()<=0||finished.GetProperty("videoSeconds").GetDouble()!=6)throw new Exception("Invalid timing");
+var summary=logs.Last(j=>j.RootElement.GetProperty("kind").GetString()=="summary").RootElement.GetProperty("data");
+if(summary.GetProperty("stats").GetProperty("completedVideoSeconds").GetDouble()!=6||summary.GetProperty("queue").GetProperty("unresolvedFiles").GetInt64()!=0)throw new Exception("Invalid queue summary");
+if(logs.Any(j=>j.RootElement.ToString().Contains(clip)))throw new Exception("Private path in logs");
+Console.WriteLine("PASS JSONL lifecycle, clip timing, aggregate throughput/queue and no private paths");
+foreach(var item in logs)item.Dispose();
+var rotationDir=Path.Combine(root,"rotation");Directory.CreateDirectory(rotationDir);File.WriteAllText(Path.Combine(rotationDir,"unrelated.txt"),"keep");
+var rotating=new DetectionLog(rotationDir,NullLogger.Instance,100,2);
+for(int i=0;i<5;i++)rotating.Write("fixture",new{iteration=i,padding=new string('x',100)});
+if(Directory.GetFiles(rotationDir,"*.jsonl").Length!=2||!File.Exists(Path.Combine(rotationDir,"unrelated.txt")))throw new Exception("Rotation/retention failure");
+Console.WriteLine("PASS bounded rotation preserves unrelated files");
 Console.WriteLine("Evidence: "+root);
 
 sealed class Env(string root):IWebHostEnvironment

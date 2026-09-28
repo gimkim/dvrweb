@@ -1,0 +1,13 @@
+# NAS detection diagnostics1.8.1
+
+2026-09-28 20:10:23–20:15 Asia/Bangkok. User requests persistent NAS logs for later diagnosis of whether analysis keeps up.
+
+Added DetectionLog JSONL sink outside web root under DataRoot/logs/detection. UTC timestamp, process ID/run ID and version on every entry. Daily/8MiB rotation, maximum32 owned log files and14day expiry. Preserves unrelated files; write errors warn via ILogger without failing detection. IDs/counters/result codes only; no paths/passwords/camera names/command lines/raw process stderr.
+
+DetectionService records startup/disabled/external-owner/runtime-missing/owner/process start-stop, per-clip start/finish/error/cancel, durations, elapsed times, device/decoder and results. Independent60second heartbeat continues during long processing/retry waits and emits counters plus SQLite queue snapshot. Startup/shutdown also summarize. Aggregate throughput counts completed clips only and uses wall time including pauses/retries/idle. Per-clip work speed is separately named and not proof of capacity. Queue breakdown distinguishes pending/processing/partial/error/complete and exhausted failures; unresolved duration/oldest age helps diagnose persistent backlog. No detector sampling or scheduling tuning in this change.
+
+Added read-only deployment/Get-DetectionDiagnostics.ps1, verified against generated local fixture logs. It displays recent rates/queue/age/failure entries, warns that3 continuous cameras require sustained aggregate rate>3, and distinguishes absent logs from healthy worker. Updated docs/nas-detection.md and notes/index. Runtime logging begins only when the app actually starts; no production HTTP request was made to force activation.
+
+Validation: integrated synthetic6second video through actual local FFmpeg/OpenVINO/GPU -> SQLite; verified process lifecycle, nonzero clip elapsed time,6seconds successful coverage, zero final unresolved count, JSONL summary/finish events, path exclusion, bounded rotation and unrelated-file preservation.4 integration checks passed, evidence artifacts/detection-integration-20260928-201304. This is not a NAS performance benchmark. Release publish of web/worker succeeded, diff checks passed. No browser/device/camera/private-footage or live API testing.
+
+Deploy succeeded with assembly-release wait and source/deployed hashes matched; appsettings.Production.json hash preserved. Backup: \\gimkim-nas\C\Users\tatsa\web-setup\GimDvr\backup-detection-20260928-201340. app_offline removed, runtime/model/recordings/settings preserved. Web-owner restart may briefly interrupt recording. Helper copied to web-setup for later use. No claims that NAS worker has already emitted real logs or meets throughput target. Commit/push normal main workflow.

@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_20-10-23_nas-detection-diagnostics.md](2026-09-28_20-10-23_nas-detection-diagnostics.md) — persistent NAS timing/throughput/queue JSONL diagnostics
+
 - [2026-09-28_20-07-24_detection-throughput-boundary.md](2026-09-28_20-07-24_detection-throughput-boundary.md) — three-camera throughput threshold and pending NAS initialization
 
 - [2026-09-28_19-50-36_nas-detection-compact-recordings.md](2026-09-28_19-50-36_nas-detection-compact-recordings.md) — NAS motion/person worker, SQLite results, compact web/app badges
