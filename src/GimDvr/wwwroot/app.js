@@ -9,7 +9,7 @@ function saveViewPrefs(){try{localStorage.setItem('gimdvr.viewing.'+me.id,JSON.s
 const roles={admin:'ผู้ดูแล',operator:'ผู้ควบคุม',viewer:'ผู้ดู'};
 async function api(path,method='GET',body){const r=await fetch(`api/${path}`,{method,headers:{'Content-Type':'application/json','X-DVR-Request':'1'},body:body===undefined?undefined:JSON.stringify(body)});if(r.status===401&&path!=='login'){signedOut();throw Error('กรุณาเข้าสู่ระบบอีกครั้ง');}let data;try{data=await r.json();}catch{data={};}if(!r.ok)throw Error(data.error||`คำขอไม่สำเร็จ (${r.status})`);return data;}
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,6000);}
-function stopLive(){window.exitLiveFullscreen?.();closeFloatingControls();document.body.appendChild($('#controls'));liveSessions.forEach(s=>s.destroy());liveSessions.clear();players.forEach(p=>p.destroy());players=[];liveTimers.forEach(clearInterval);liveTimers=[];document.querySelectorAll('.live-video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});clearInterval(refreshTimer);}
+function stopLive(){stopRecordingRefresh();window.exitLiveFullscreen?.();closeFloatingControls();document.body.appendChild($('#controls'));liveSessions.forEach(s=>s.destroy());liveSessions.clear();players.forEach(p=>p.destroy());players=[];liveTimers.forEach(clearInterval);liveTimers=[];document.querySelectorAll('.live-video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});clearInterval(refreshTimer);}
 function signedOut(){stopLive();document.body.classList.remove('single-view');$('#shell').hidden=true;$('#login').hidden=false;me=null;}
 async function start(){try{me=await api('me');loadViewPrefs();$('#login').hidden=true;$('#shell').hidden=false;$('#accountButton').textContent=`${me.username} · ${roles[me.role]}`;document.querySelectorAll('.admin-only').forEach(e=>e.hidden=me.role!=='admin');await navigate(page);}catch{signedOut();}}
 $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;$('#loginError').textContent='';try{const f=new FormData(e.target);await api('login','POST',{username:f.get('username'),password:f.get('password'),rememberDevice:androidApp});e.target.reset();window.GimDvrAndroid?.flushCookies();await start();}catch(err){$('#loginError').textContent=err.message;}finally{button.disabled=false;}});
@@ -85,11 +85,33 @@ function detectionIcons(d){
  const paths={motion:'<path d="M2 12h4l3-8 6 16 3-8h4"/>',human:'<circle cx="12" cy="5" r="3"/><path d="M6 22v-7a6 6 0 0 1 12 0v7M12 15v7"/>'};
  return ['motion','human'].map(k=>{const value=d?.[k],name=k==='motion'?'Motion':'Human',state=value===true?'yes':value===false?'no':'unknown',text=value===true?'พบ':value===false?'ไม่พบในภาพที่สุ่มตรวจ':d?.state==='error'?'ตรวจไม่สำเร็จ':d?.state==='partial'?'ข้อมูลไม่ครบ':d?.state==='processing'?'กำลังตรวจ':'รอตรวจ';const label=name+': '+text;return `<span class="detect-badge ${state}" title="${esc(label)}" role="img" aria-label="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true">${paths[k]}</svg><small>${value===true?'✓':value===false?'−':'?'}</small></span>`;}).join('');
 }
-let recordingQuery=0,clipRange=null,clipFinished=false;
+let recordingQuery=0,clipRange=null,clipFinished=false,recordingRefreshTimer;
+function stopRecordingRefresh(){clearTimeout(recordingRefreshTimer);recordingQuery++;}
+function updateDetectionCount(){const n=$('#detectionCount');if(n)n.textContent=`ตรวจแล้ว ${clips.filter(r=>r.detection?.state==='complete').length}/${clips.length}`;}
+function scheduleDetectionRefresh(generation,filter){
+ if(generation!==recordingQuery||page!=='recordings'||!clips.some(r=>r.detection?.state!=='complete'))return;
+ recordingRefreshTimer=setTimeout(async()=>{
+  if(generation!==recordingQuery||page!=='recordings')return;
+  try{
+   if(!document.hidden){
+    const updates=new Map();
+    for(let offset=0;;offset+=1000){
+     const batch=await api('recording-range?'+new URLSearchParams({...filter,offset}));
+     if(generation!==recordingQuery||page!=='recordings')return;
+     for(const r of batch)updates.set(r.id,r.detection);
+     if(batch.length<1000)break;
+    }
+    clips.forEach((r,i)=>{if(updates.has(r.id)){r.detection=updates.get(r.id);const n=$(`[data-detection-index="${i}"]`);if(n)n.innerHTML=detectionIcons(r.detection);}});
+    updateDetectionCount();
+   }
+  }catch{/* Retry metadata only; never interrupt playback on a transient failure. */}
+  scheduleDetectionRefresh(generation,filter);
+ },10000);
+}
 function localInput(date){return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,19);}
-function resetRecordingResults(){recordingQuery++;clips=[];clipRange=null;$('#player').close();$('#recordingList').innerHTML='<p class="muted">เลือกกล้องและช่วงเวลา แล้วกดค้นหาวิดีโอ</p>';}
+function resetRecordingResults(){stopRecordingRefresh();clips=[];clipRange=null;$('#player').close();$('#recordingList').innerHTML='<p class="muted">เลือกกล้องและช่วงเวลา แล้วกดค้นหาวิดีโอ</p>';}
 function renderRecordings(){
- const to=new Date(),from=new Date(to.getTime()-3600000);recordingQuery++;clips=[];clipRange=null;
+ const to=new Date(),from=new Date(to.getTime()-3600000);stopRecordingRefresh();clips=[];clipRange=null;
  $('#main').innerHTML=title('ดูย้อนหลัง','เลือกกล้อง แล้วกำหนดช่วงเวลาที่ต้องการดู')+`<div class="panel recording-panel"><form id="recordingFilter"><div class="toolbar"><label>กล้อง<select name="camera" required><option value="" disabled selected>เลือกกล้องก่อน</option>${cameras.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div><fieldset id="recordingTimes" disabled class="toolbar"><label>วันเวลาเริ่ม<input name="from" type="datetime-local" step="1" value="${localInput(from)}" required></label><label>วันเวลาสิ้นสุด<input name="to" type="datetime-local" step="1" value="${localInput(to)}" required></label><button type="button" id="lastHour">1 ชั่วโมงล่าสุด</button><button class="primary" type="submit">ค้นหาวิดีโอ</button></fieldset></form><p class="muted">เวลาตามอุปกรณ์ของคุณ · เริ่มต้นเป็น 1 ชั่วโมงล่าสุด</p><div id="recordingList"><p class="muted">กรุณาเลือกกล้องก่อน</p></div></div>`;
  const form=$('#recordingFilter');form.elements.camera.onchange=()=>{$('#recordingTimes').disabled=false;resetRecordingResults();};
  form.elements.from.onchange=form.elements.to.onchange=resetRecordingResults;
@@ -103,9 +125,10 @@ async function loadRecordings(){
  try{
   for(let offset=0;;offset+=1000){const q=new URLSearchParams({camera:f.get('camera'),from:from.toISOString(),to:to.toISOString(),offset});const batch=await api('recording-range?'+q);if(generation!==recordingQuery||page!=='recordings')return;list.push(...batch);if(batch.length<1000)break;$('#recordingList').textContent=`กำลังค้นหา… ${list.length} ไฟล์`;}
   clips=Array.from(new Map(list.map(r=>[r.id,r])).values());clipRange={from:+from,to:+to};
-  $('#recordingList').innerHTML=clips.length?`<div class="actions recording-summary"><strong>${clips.length} ไฟล์</strong><button id="playAll" class="primary">▶ เล่นทั้งหมด</button><small class="muted">Motion / Human · ✓ พบ · − ไม่พบ · ? รอตรวจ/ข้อมูลไม่ครบ</small></div><div class="recording-results">${clips.map((r,i)=>`<div class="recording-row"><div class="recording-stamp"><strong>${esc(new Date(r.start).toLocaleTimeString('th-TH',{hour12:false}))}</strong><small>${esc(new Date(r.start).toLocaleDateString('th-TH'))} · ${Math.round(r.duration)}s · ${(r.bytes/1048576).toFixed(1)} MB</small></div><div class="detection-icons">${detectionIcons(r.detection)}</div><button data-play="${i}" aria-label="เล่นไฟล์ ${i+1}">▶ เล่น</button></div>`).join('')}</div>`:'<div class="empty-card"><h3>ไม่พบไฟล์ในช่วงเวลาที่เลือก</h3><p>ไฟล์จะแสดงหลังบันทึกแต่ละช่วงเสร็จ</p></div>';
+  $('#recordingList').innerHTML=clips.length?`<div class="actions recording-summary"><strong>${clips.length} ไฟล์</strong><button id="playAll" class="primary">▶ เล่นทั้งหมด</button><small id="detectionCount" class="muted" aria-live="polite"></small><small class="muted">Motion / Human · ✓ พบ · − ไม่พบ · ? รอตรวจ/ข้อมูลไม่ครบ</small></div><div class="recording-results">${clips.map((r,i)=>`<div class="recording-row"><div class="recording-stamp"><strong>${esc(new Date(r.start).toLocaleTimeString('th-TH',{hour12:false}))}</strong><small>${esc(new Date(r.start).toLocaleDateString('th-TH'))} · ${Math.round(r.duration)}s · ${(r.bytes/1048576).toFixed(1)} MB</small></div><div class="detection-icons" data-detection-index="${i}">${detectionIcons(r.detection)}</div><button data-play="${i}" aria-label="เล่นไฟล์ ${i+1}">▶ เล่น</button></div>`).join('')}</div>`:'<div class="empty-card"><h3>ไม่พบไฟล์ในช่วงเวลาที่เลือก</h3><p>ไฟล์จะแสดงหลังบันทึกแต่ละช่วงเสร็จ</p></div>';
   document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{$('#autoNext').checked=false;playClip(Number(b.dataset.play));});
   if($('#playAll'))$('#playAll').onclick=()=>{$('#autoNext').checked=true;playClip(0);};
+  updateDetectionCount();scheduleDetectionRefresh(generation,{camera:f.get('camera'),from:from.toISOString(),to:to.toISOString()});
  }catch(e){if(generation===recordingQuery&&page==='recordings')$('#recordingList').textContent='ค้นหาไม่สำเร็จ: '+e.message;}
 }
 function playClip(index){

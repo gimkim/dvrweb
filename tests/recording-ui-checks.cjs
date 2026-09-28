@@ -6,8 +6,9 @@ function $(id){if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',check
 const video=$('#playVideo');Object.assign(video,{duration:60,currentTime:0,play:()=>Promise.resolve(),pause(){this.paused=true;},removeAttribute(){},load(){}});
 const form=$('#recordingFilter');form.elements={camera:{value:'a'},from:{value:'2026-09-28T10:00:20'},to:{value:'2026-09-28T10:01:20'}};form.reportValidity=()=>true;
 const rows=[{id:'one',cameraName:'A',start:new Date('2026-09-28T10:00:00').toISOString(),duration:60,bytes:1000},{id:'two',cameraName:'A',start:new Date('2026-09-28T10:01:00').toISOString(),duration:60,bytes:1000}];
+let pendingTimer,queries=0,reply=rows;
 let query;const buttons=[{dataset:{play:'0'}},{dataset:{play:'1'}}];
-const ctx=vm.createContext({$,Date,URLSearchParams,FormData:class{get(k){return form.elements[k].value;}},clips:[],clipIndex:0,cameras:[{id:'a',name:'A'}],page:'recordings',esc:String,title:()=>'',toast(){},document:{querySelectorAll:()=>buttons},api:async q=>{query=q;return rows;}});
+const ctx=vm.createContext({setTimeout(fn){pendingTimer=fn;return 1;},clearTimeout(){pendingTimer=null;},$,Date,URLSearchParams,FormData:class{get(k){return form.elements[k].value;}},clips:[],clipIndex:0,cameras:[{id:'a',name:'A'}],page:'recordings',esc:String,title:()=>'',toast(){},document:{querySelectorAll:()=>buttons},api:async q=>{queries++;query=q;return reply;}});
 vm.runInContext(source.slice(source.indexOf('function detectionIcons('),source.indexOf('async function renderUsers')),ctx);
 (async()=>{
  ctx.renderRecordings();const html=$('#main').innerHTML;
@@ -30,4 +31,16 @@ vm.runInContext(source.slice(source.indexOf('function detectionIcons('),source.i
  assert.match(ctx.detectionIcons({state:'partial',motion:false,human:null}),/Human: ข้อมูลไม่ครบ/);
  assert.doesNotMatch($('#recordingList').innerHTML,/<table/);
  console.log('PASS compact results preserve positive, negative and unknown accessible SVG indicators');
+ const currentSrc=video.src;video.currentTime=23;
+ reply=rows.map(r=>({...r,detection:{state:'complete',motion:true,human:false}}));
+ const refresh=pendingTimer;pendingTimer=null;await refresh();
+ assert.match($('[data-detection-index="0"]').innerHTML,/Motion: พบ/);
+ assert.equal($('#detectionCount').textContent,'ตรวจแล้ว 2/2');assert.equal(video.src,currentSrc);assert.equal(video.currentTime,23);assert.equal(pendingTimer,null);
+ console.log('PASS delayed results update badges/count and stop polling on completion without replacing playback');
+ reply=rows.map(r=>({...r,detection:null}));await ctx.loadRecordings();const stale=pendingTimer;ctx.resetRecordingResults();const before=queries;await stale();assert.equal(queries,before);
+ console.log('PASS changed filter cancels stale scheduled work');
+ await ctx.loadRecordings();ctx.page='live';const left=pendingTimer;await left();assert.equal(queries,before+1);ctx.page='recordings';
+ console.log('PASS navigation prevents further polling');
+ let resolve;await ctx.loadRecordings();ctx.api=()=>new Promise(r=>resolve=r);const inflight=pendingTimer();ctx.resetRecordingResults();const old=$('[data-detection-index="0"]').innerHTML;resolve(reply);await inflight;assert.equal($('[data-detection-index="0"]').innerHTML,old);
+ console.log('PASS in-flight stale response ignored after reset');
 })().catch(e=>{console.error(e);process.exitCode=1;});

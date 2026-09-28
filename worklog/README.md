@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_20-25-29_detection-results-refresh.md](2026-09-28_20-25-29_detection-results-refresh.md) — worker still progressing; refresh web/Android detection results without interrupting playback
+
 - [2026-09-28_20-19-59_detection-log-review.md](2026-09-28_20-19-59_detection-log-review.md) — passive NAS log review: GPU confirmed, approximately 3.01x throughput with limited margin
 
 - [2026-09-28_20-10-23_nas-detection-diagnostics.md](2026-09-28_20-10-23_nas-detection-diagnostics.md) — persistent NAS timing/throughput/queue JSONL diagnostics
