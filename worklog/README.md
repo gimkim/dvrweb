@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-48-54_preserve-live-layout-sessions.md](2026-09-28_18-48-54_preserve-live-layout-sessions.md) — preserve players and background streams across live layouts
+
 - [2026-09-28_18-42-33_unified-copy-controls-100ms.md](2026-09-28_18-42-33_unified-copy-controls-100ms.md) — shared copy stream for all viewing modes, overview controls,100ms fragments /200ms buffers
 
 - [2026-09-28_18-41-08_overview-buffer-200ms.md](2026-09-28_18-41-08_overview-buffer-200ms.md) — overview startup/rebuffer/live target set to200ms; static deployment

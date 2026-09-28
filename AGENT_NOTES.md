@@ -26,7 +26,7 @@ Camera RTSP → reader หนึ่งตัวต่อกล้อง → บ�
 - ตั้งแต่1.6.1 ต้องมีavcC/SPS/PPSครบก่อนpublishinit: delay_moovอย่างเดียวไม่พอกับVStarcamชุดนี้ จึงเติมavcCว่างจากSPS/PPSในkeyframeแรก โดยไม่แก้encodedframes; JSต้องตรวจขอบเขตและSPS/PPSก่อนสร้างcodec string ([worklog](worklog/2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md))
 - Readerเดิมสร้างfMP4บนstdoutและcacheร่วมกัน ขอบเขต128fragments/64MiB; ไม่เปิดRTSPหรือencoderใหม่ต่อviewer ส่วนHLScopyยังคงไว้สำหรับsnapshot
 - ผู้ชมใหม่รอkeyframeถัดไป แล้วส่งfragmentต่อเนื่องรวมdependentframes ไม่รอครบGOP; MediaSource target0.2s/start0.2s/rebuffer0.2s (ปรับตามผู้ใช้2026-09-28; worklog/2026-09-28_18-41-08_overview-buffer-200ms.md), catchup1.05x, seekเมื่อเกิน2s ตรวจสิทธิ์ซ้ำทุก2sและยกเลิกfetchเมื่อหยุดดู ค่าเหล่านี้ไม่ใช่การรับประกันend-to-end latency ([worklog](worklog/2026-09-28_18-28-23_continuous-copy-fmp4.md))
-- โหมดเดี่ยวเต็มพื้นที่tab มี Back/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมก่อนเปิดเดี่ยว ไม่แก้ค่าการดูที่จำไว้ ทุกโหมดส่งภาพเท่านั้นจึงไม่มีปุ่มเสียงสด
+- โหมดเดี่ยวเต็มพื้นที่tab มี Back/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ขยายvideoelementเดิมด้วยCSS ไม่stop/reconnectสตรีมตอนสลับโหมด กล้องอื่นคงsessionเบื้องหลัง; กล้องที่ปิดดูไว้จะเปิดชั่วคราวเมื่อเลือกเดี่ยวและหยุดเฉพาะตัวนั้นเมื่อออก ไม่แก้ค่าการดูที่จำไว้ ทุกโหมดส่งภาพเท่านั้นจึงไม่มีปุ่มเสียงสด
 - UIทั้งสองโหมดส่งoverviewleaseและใช้/api/cameras/{id}/copy-streamเดียวกัน ไม่เริ่มQSV/CPUencoder; legacyfocusendpointยังอยู่สำหรับclientเก่าและหยุดencoderเมื่อleaseหมด8s
 - Legacy QSV (UIปัจจุบันไม่ใช้): veryfast, async_depth1, lookahead0, Bframes0, 1080p15fps, GOP8 (~0.533s), target/max4Mbps, VBV1Mbit, low_delay_brc1; decode/scaleยังCPU; probeและCPUfallbackultrafast/zerolatencyยังอยู่และหน้าเดี่ยวบอกencoderจริง
 - Legacy Focus HLS (UIปัจจุบันไม่ใช้): target0.5s/list12 (NASจริง0.533333s); player liveSync0.7s, maxLatency2s, maxBuffer1.5s, backBuffer1s, catchup≤1.1x เป็นclassicHLSsegmentสั้น ไม่ใช่LL-HLS partial segments และไม่รับประกันcamera-to-screen<1s
@@ -97,3 +97,5 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 ตั้งแต่ 2026-09-28T18:05:36.704868+07:00 ทดสอบเฉพาะ smoke test / functional test ของโค้ด ไม่เปิดหน้าเว็บจริง ไม่ทดสอบbrowserหรือbrowser harness เว้นแต่ผู้ใช้สั่งให้ทดสอบโดยชัดเจน ใช้localcode/backendfixtures และตรวจไฟล์/hashการdeployได้ ผลbrowserก่อนหน้านี้เป็นประวัติ ไม่ใช่สิทธิ์ให้ทดสอบซ้ำ ([worklog](worklog/2026-09-28_18-05-36_code-tests-only-policy.md))
 
 การเปลี่ยนล่าสุด: [ทุกโหมดใช้copy100msและคืนcontrolหน้ารวม](worklog/2026-09-28_18-42-33_unified-copy-controls-100ms.md). Bufferทั้งสาม200ms; ทดสอบเฉพาะโค้ดและไฟล์deploymentตามกติกาเดิม.
+
+สลับlayoutต้องรักษาDOM/MediaSource/sessionเดิม ใช้stopLiveเฉพาะออกจากหน้าภาพสด/logout/suspendหรือreloadจริง ([worklog](worklog/2026-09-28_18-48-54_preserve-live-layout-sessions.md)).

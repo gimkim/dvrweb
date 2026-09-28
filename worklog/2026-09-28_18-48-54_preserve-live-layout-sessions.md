@@ -1,0 +1,11 @@
+# Preserve live players when switching overview/single view
+
+Recorded2026-09-28 18:48:54 Asia/Bangkok during implementation. User requests keeping all other camera streams alive and expanding the existing player rather than reconnecting/rebuffering while switching modes.
+
+Changed app.js to keep a single live-grid DOM across overview and single-camera transitions. Navigation within this mounted live view changes classes/inert state and control-panel placement, without stopLive, camera-list fetch, video reparenting, MediaSource replacement or reconnecting existing sessions. Other enabled viewers stay mounted offscreen with sessions/heartbeats intact. Single-camera toolbar/fullscreen controls are created once and exposed only by selected-card styling. Browser history uses the same transition. Explicit navigation away/logout/app suspend retains existing cleanup; resume reconstructs streams as before.
+
+If an overview-disabled camera is explicitly selected, open a temporary single-view session; when leaving it, stop only that temporary session and preserve the saved preference. Entry from another page or a direct camera URL initially builds the live grid and then expands the selected card. Draggable controls and PTZ stop cleanup remain active during layout changes. Fragment100ms and all200ms buffer settings are unchanged.
+
+Verification: JavaScript syntax passes;3 new code-only layout tests verify overview/single/camera-switch/back keeps original session and video objects with no new connection requests, temporary disabled-camera cleanup without affecting other cameras, and control-panel transitions.3 role/fullscreen rendering checks and6 existing session lifecycle checks pass. No actual browser, production HTTP or physical device testing. Browser background decoding behavior/real transition smoothness remain unmeasured.
+
+Static app.js/app.css deployed after timestamped backup under web-setup/GimDvr/backup-persistent-layout-20260928-185023; both source/deployed SHA256 hashes match. Publish staging updated as well. No binary restart, recording interruption, camera/config/data changes or APK rebuild. Content-hash asset versioning applies on normal reload/reopen. Updated notes/README/index and prepared source for main commit/push.
