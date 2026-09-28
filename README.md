@@ -81,7 +81,7 @@ Public source: https://github.com/gimkim/dvrweb. With .NET 10 and FFmpeg install
 
 ## Android app and per-camera viewing
 
-Install [GimDVR 1.0.0 APK](https://gimgim.ddns.net/gimdvr/downloads/GimDVR-1.0.0.apk) on Android 8 or newer. The app opens the fixed server https://gimgim.ddns.net/gimdvr/ and uses your existing GimDVR login. It is a .NET Android WebView client, with no camera credentials or server-selection screen. Cameras stack vertically; fullscreen switches to landscape with a draggable camera-control panel. Android physical-device validation is still pending.
+Install [GimDVR 1.0.1 APK](https://gimgim.ddns.net/gimdvr/downloads/GimDVR-1.0.1.apk) on Android 8 or newer. The app opens the fixed server https://gimgim.ddns.net/gimdvr/ and uses your existing GimDVR login. It is a .NET Android WebView client, with no camera credentials or server-selection screen. Cameras stack vertically; fullscreen switches to landscape with a draggable camera-control panel. Android physical-device validation is still pending.
 
 The power switch before each camera name controls viewing on this device only. Preferences survive reopening and logout, separately per user/browser/app. It does not turn off recording or the camera. Android keeps a persistent login cookie (long-lived server ticket); explicit logout clears it. Clearing app data, reinstalling, platform expiration or server-side account/password changes can require login again.
 
@@ -101,3 +101,5 @@ The shared fragment cache remains bounded to128fragments/64MiB per camera. New v
 Local checks: `node tests/live-session-checks.cjs`, `node tests/live-mode-checks.cjs`, `node tests/copy-stream-checks.cjs`, and `dotnet run --project tests/GimDvr.StreamChecks -c Release`. The100ms synthetic fixture produces100fragments over10seconds with matching decoded frames. No real browser/device testing was performed for this change under the user's code-only testing policy.
 
 Switching overview/single camera now expands the existing video in place and keeps other selected camera streams running. Returning to overview reuses those same players and buffers. A camera disabled in overview is started temporarily when selected alone, then stopped on return without changing the saved preference. Leaving live views or suspending the app still releases sessions. Layout lifecycle checks: `node tests/live-layout-checks.cjs`.
+
+Android1.0.1 loads the same server-owned copy-stream player as the website with WebView CacheMode.NoCache. Cookies and DOM storage remain enabled; no stored login/preferences are cleared. Install the signed update over1.0.0 to retain app data. Both modes inherit100ms fragments,200ms buffers and in-place layout switching; streams stop on app background/suspend as before. Physical-device playback has not been tested.

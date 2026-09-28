@@ -85,8 +85,8 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 
 ## Android และการเปิด/ปิดดูแต่ละกล้อง
 
-- Web 1.4.0 / APK 1.0.0: ปุ่มก่อนชื่อกล้องเปิด/ปิดเฉพาะการดูของอุปกรณ์นี้ จำ localStorage แยก user ID/camera ID ไม่เปลี่ยน recording หรือ enabled ของกล้อง และไม่กระทบ viewer อื่น
-- หนึ่ง live session ต่อกล้องเป็นเจ้าของ HLS/retry/listeners/heartbeat ต้องยกเลิกได้แม้ watch request ยังรออยู่; background Android หยุด session และ resume เฉพาะกล้องที่เลือก
+- Web 1.7.0 / APK 1.0.1: ปุ่มก่อนชื่อกล้องเปิด/ปิดเฉพาะการดูของอุปกรณ์นี้ จำ localStorage แยก user ID/camera ID ไม่เปลี่ยน recording หรือ enabled ของกล้อง และไม่กระทบ viewer อื่น
+- หนึ่ง live session ต่อกล้องเป็นเจ้าของ copy-stream/fetch/retry/listeners/heartbeat ต้องยกเลิกได้แม้ watch request ยังรออยู่; background Android หยุด session และ resume เฉพาะกล้องที่เลือก
 - Android เป็น .NET10 WebView ที่ fix HTTPS server /gimdvr/; CookieManager เก็บ cookie ไม่มี password ใน APK, RememberDevice ticket อายุ10ปีตาม server แต่ platform expiration/ล้างข้อมูล/เปลี่ยนรหัสหรือสิทธิ์ยังทำให้ต้อง login ใหม่
 - แนวตั้งเรียงกล้องลงมา; fullscreen เป็น native landscape + CSS wrapper มี control dialog ลากได้ ต้องย้าย dialog กลับ body ก่อนลบ card เสมอ
 - APK net.gimgim.gimdvr, Android8+, arm64/arm/x64; ใช้ deployment/Build-Android.ps1 กับ signing key เดิมที่ .local-data/android-signing ห้าม commit key/pass/APK และต้อง apksigner verify ทุก build
@@ -99,3 +99,5 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 การเปลี่ยนล่าสุด: [ทุกโหมดใช้copy100msและคืนcontrolหน้ารวม](worklog/2026-09-28_18-42-33_unified-copy-controls-100ms.md). Bufferทั้งสาม200ms; ทดสอบเฉพาะโค้ดและไฟล์deploymentตามกติกาเดิม.
 
 สลับlayoutต้องรักษาDOM/MediaSource/sessionเดิม ใช้stopLiveเฉพาะออกจากหน้าภาพสด/logout/suspendหรือreloadจริง ([worklog](worklog/2026-09-28_18-48-54_preserve-live-layout-sessions.md)).
+
+APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว็บ ตั้งWebView CacheMode.NoCacheโดยไม่ล้างCookie/DOMstorage;100msfragments/200msbuffer/สลับlayoutไม่reconnectมาจากเว็บ ไม่มีnativeencoderเพิ่ม ([worklog](worklog/2026-09-28_18-51-04_android-shared-web-stream.md)).

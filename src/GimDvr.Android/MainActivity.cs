@@ -20,8 +20,10 @@ public sealed class MainActivity:Activity
         Window?.SetFlags(WindowManagerFlags.KeepScreenOn,WindowManagerFlags.KeepScreenOn);
         web=new WebView(this);var root=new FrameLayout(this);root.AddView(web,new FrameLayout.LayoutParams(-1,-1));root.SetOnApplyWindowInsetsListener(new InsetsListener(this));SetContentView(root);
         var s=web.Settings;s.JavaScriptEnabled=true;s.DomStorageEnabled=true;s.MediaPlaybackRequiresUserGesture=false;
+        // Always load the server-owned player; retain cookies and DOM storage for user state.
+        s.CacheMode=CacheModes.NoCache;
         s.AllowFileAccess=false;s.AllowContentAccess=false;s.MixedContentMode=MixedContentHandling.NeverAllow;
-        s.UserAgentString+=" GimDvrAndroid/1.0";s.SetSupportMultipleWindows(false);
+        s.UserAgentString+=" GimDvrAndroid/1.0.1";s.SetSupportMultipleWindows(false);
         CookieManager.Instance?.SetAcceptCookie(true);CookieManager.Instance?.SetAcceptThirdPartyCookies(web,false);
         web.SetWebViewClient(new LockedClient(this));web.SetWebChromeClient(new WebChromeClient());
         web.AddJavascriptInterface(new Bridge(this),"GimDvrAndroid");
