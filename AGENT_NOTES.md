@@ -115,3 +115,5 @@ APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว�
 Fullscreenต้องมีปุ่มกลับหน้ารวมภายในvideo-wrap และซ่อนปุ่มfullscreenซ้ำซ้อน กดกลับครั้งเดียวออกfullscreen/คืนแนวจอ/กลับoverviewโดยคงsession ([worklog](worklog/2026-09-28_19-08-32_fullscreen-direct-back.md)).
 
 Mobile recordings: Android shell exposes Live/Recordings tabs; web retains sidebar navigation. Mobile search/cards/player fit narrow screens. Detection configuration is not an event: current recordings have no event timeline, so absence of metadata means unknown. Vendor alarm push exists on some models, but these cameras remain unverified ([worklog](worklog/2026-09-28_19-10-18_mobile-recordings-detection-review.md)).
+
+Eye4 static RE found separate local sensor logs, cloud events and SD filename motion markers; never infer event labels from NAS-generated filenames. Human capability uses additional2017/2126/2127 queries beyond current2106 probe; prior missing2106 data is inconclusive. Android sample authenticity remains unverified. See [research](docs/eye4-protocol-findings.md) and [worklog](worklog/2026-09-28_19-20-49_eye4-reverse-engineering.md).

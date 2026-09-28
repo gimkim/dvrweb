@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_19-20-49_eye4-reverse-engineering.md](2026-09-28_19-20-49_eye4-reverse-engineering.md) — Eye4 static protocol research, local/cloud/SD alarm sources
+
 - [2026-09-28_19-10-18_mobile-recordings-detection-review.md](2026-09-28_19-10-18_mobile-recordings-detection-review.md) — mobile recordings navigation/layout; vendor event capability review
 
 - [2026-09-28_19-08-32_fullscreen-direct-back.md](2026-09-28_19-08-32_fullscreen-direct-back.md) — one-tap fullscreen back to overview on web/app
@@ -71,4 +73,3 @@
 สร้าง YYYY-MM-DD_HH-mm-ss_topic.md ใหม่ทุกงาน ไม่รวมเป็นไฟล์รายวัน เพิ่มลิงก์ในงานล่าสุด บันทึกคำขอ/การแก้ไข หลักฐาน deployment และสิ่งที่ยังไม่ยืนยัน การแก้ข้อมูลเก่าเป็น entry ใหม่อ้างไฟล์เดิม
 
 - [2026-09-28_19-14-56-camera-stream-options.md](2026-09-28_19-14-56-camera-stream-options.md) — camera main/substream options and current copy-stream clarification
-
