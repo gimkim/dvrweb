@@ -155,3 +155,5 @@ Snapshot placement: overview footer beside Control; single/fullscreen bottom act
 Initial live startup uses shared spinner/short label covering native poster until playing; rebuffer after first playback does not re-cover image. Layout switching preserves state; new viewing session resets it.
 
 1.10.3 NAS detection now2persistent lanes, readrate0/unlimited in external detection-tuning.json. Defaults remain1lane/4x for other installs; adjustable1–4lanes,0–32readrate. Serialized claims + owner lock, independent errors, remote requests serialized. Logs track lanes/active jobs; short night sample~11x aggregate, not long-run capacity. [worklog](worklog/2026-09-29_02-19-01_detection-concurrency-readrate.md).
+
+1.10.4 admin System page exposes NAS workers1–4/readrate0–32(0unlimited). SQLite detection settings override external tuning once saved. Dynamic lanes scale at job boundaries and dispose inactive model processes; no recording restart when saved. Remote concurrency unchanged. [worklog](worklog/2026-09-29_02-22-20_admin-detection-settings.md).

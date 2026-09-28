@@ -40,3 +40,7 @@ External DataRoot/detection-tuning.json accepts Dvr:DetectionConcurrency (1–4,
 Readrate4 was a deliberate resource cap, not hardware throughput. Use bounded queue/log measurements to choose the rate; CPU/GPU percentages alone do not establish capacity. Summaries now include concurrency, readRate, activeJobs and currentRecordings; clip events include lane. Aggregate wall throughput remains the relevant metric and includes idle time. Model RAM scales with lane count. Newest/oldest3:1 scheduling remains shared across lanes.
 
 Current NAS setting is2lanes and DetectionReadRate0 (unlimited). Short night sample of3clips totaled191.5video seconds in17.35wall seconds; do not extrapolate this to all scenes or sustained throughput without logs.
+
+## Admin settings (1.10.4)
+
+System & activity now edits NAS worker count1–4 and readrate0–32(0unlimited). Admin-only audited settings persist in SQLite and override external tuning after first save. Both worker count and speed apply dynamically to new jobs; reducing workers finishes active jobs and releases extra model processes. No service/recording restart is needed for settings changes. Remote MotionService capacity is unchanged.

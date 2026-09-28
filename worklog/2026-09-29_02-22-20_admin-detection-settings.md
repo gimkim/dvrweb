@@ -1,0 +1,9 @@
+# Admin detection settings (1.10.4)
+
+User requests read-speed limit/unlimited and concurrent worker controls in admin UI. Added Motion/Human NAS panel on System & activity with workers1–4 and readrate0–32 (0unlimited). Admin-only GET/PUT endpoints validate finite/range values, store settings in shared SQLite, and audit successful changes. Existing external tuning config supplies defaults until first save, preserving deployed2workers/unlimited. Database settings then take precedence.
+
+Four lightweight async slots read the configured worker count before claiming jobs. Only enabled slots instantiate Python/model processes. Increasing starts more slots within polling interval; decreasing finishes current file and disposes extra detector process, without cancelling an in-flight job or restarting camera recording. Readrate is read for new local analysis requests. Remote MotionService concurrency remains its existing serialized behavior, stated in UI. Worker and web share SQLite values.
+
+Validation:61backend checks include bounds/nonfinite rejection and saved values unchanged after rejection.3UI/settings code checks cover rendering, existing stream settings and admin route policy. Actual synthetic OpenVINO integration starts1lane, saves2while first clip runs, then reduces1/readrate0while both active; both finish exactly once, owner lock releases and totals/logs remain correct.5integration checks pass. Initial test-directory race corrected before successful run. No real browser/device testing under current policy.
+
+Release web/worker published and deployed with config/database preservation and hash verification. Existing external2worker/unlimited defaults retained; no forced database replacement. Binary update causes a brief normal recorder restart, but later admin setting changes do not. Source/notes/log committed and pushed.

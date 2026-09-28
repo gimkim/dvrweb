@@ -18,8 +18,16 @@ using(var ffmpeg=new Process{StartInfo=new(args[1]){UseShellExecute=false,Create
 }
 var recording=new Recording("synthetic","test","Synthetic",clip,DateTimeOffset.UtcNow,6,new FileInfo(clip).Length);store.AddRecording(recording);
 var clip2=Path.Combine(root,"synthetic2.mp4");File.Copy(clip,clip2);var recording2=recording with{Id="synthetic2",Path=clip2};store.AddRecording(recording2);
+Directory.CreateDirectory(Path.Combine(root,"logs","detection"));store.SaveDetectionSettings(new(1,1));
 using var service=new DetectionService(store,paths,config,NullLogger<DetectionService>.Instance);
 await service.StartAsync(CancellationToken.None);
+using(var scaleTimeout=new CancellationTokenSource(TimeSpan.FromSeconds(30))){
+ int Starts()=>Directory.GetFiles(Path.Combine(root,"logs","detection"),"*.jsonl").SelectMany(File.ReadAllLines).Count(l=>l.Contains("\"kind\":\"clip_start\""));
+ while(Starts()<1)await Task.Delay(25,scaleTimeout.Token);
+ store.SaveDetectionSettings(new(2,1));
+ while(Starts()<2)await Task.Delay(25,scaleTimeout.Token);
+ store.SaveDetectionSettings(new(1,0));
+}
 DetectionResult? result=null;
 try
 {

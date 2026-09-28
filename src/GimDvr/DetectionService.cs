@@ -17,8 +17,8 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
     readonly System.Collections.Concurrent.ConcurrentDictionary<int,string> activeRecordings=new();
     readonly SemaphoreSlim remoteGate=new(1,1);
     int scheduleTurn;
-    double readRate=>Math.Clamp(config.GetValue<double?>("Dvr:DetectionReadRate")??4,0,32);
-    int concurrency=>Math.Clamp(config.GetValue<int?>("Dvr:DetectionConcurrency")??1,1,4);
+    double readRate=>store.DetectionSettings(config).ReadRate;
+    int concurrency=>store.DetectionSettings(config).Workers;
     void Summary()
     {
         object stats;
@@ -65,7 +65,7 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
                 using var gate=new FileStream(Path.Combine(paths.Runtime,"detection.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);
                 diagnostics.Write("owner_acquired",new{});
                 store.ResetInterruptedDetections();
-                await Task.WhenAll(Enumerable.Range(0,concurrency).Select(lane=>RunLane(lane,python,script,model,remote,stoppingToken)));
+                await Task.WhenAll(Enumerable.Range(0,4).Select(lane=>RunLane(lane,python,script,model,remote,stoppingToken)));
             }
             catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){break;}
             catch(Exception e){workerState="retrying";diagnostics.Write("worker_error",new{errorType=e.GetType().Name});log.LogWarning("Detection worker unavailable ({Type}); retrying",e.GetType().Name);}
@@ -84,6 +84,7 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
 
         while(!ct.IsCancellationRequested)
         {
+            if(lane>=concurrency){await detector.DisposeAsync();await Task.Delay(3000,ct);continue;}
             var recording=store.ClaimDetection(Interlocked.Increment(ref scheduleTurn)%4==0);
             if(recording is null){workerState="idle";await Task.Delay(3000,ct);continue;}
             workerState="processing";activeRecordings[lane]=recording.Id;

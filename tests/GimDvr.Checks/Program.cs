@@ -166,6 +166,11 @@ Check(MediaService.InputClockArguments(false).SequenceEqual(new[]{"-fflags","+ge
 for(int i=0;i<8;i++)store.AddRecording(new("parallel-"+i,"test","Test","parallel-"+i,DateTimeOffset.UtcNow.AddDays(2).AddSeconds(i),60,1));
 var claims=await Task.WhenAll(Enumerable.Range(0,8).Select(_=>Task.Run(()=>store.ClaimDetection())));
 Check(claims.All(r=>r is not null)&&claims.Select(r=>r!.Id).Distinct().Count()==8,"parallel detection claims never duplicate a recording");
+Check(store.DetectionSettings(config)==new DetectionSettings(),"detection settings default to compatible runtime policy");
+store.SaveDetectionSettings(new(2,0));
+Check(store.DetectionSettings(config)==new DetectionSettings(2,0),"detection workers and unlimited read speed persist");
+foreach(var invalid in new[]{new DetectionSettings(0,4),new DetectionSettings(5,4),new DetectionSettings(2,-1),new DetectionSettings(2,33),new DetectionSettings(2,double.NaN)}){try{store.SaveDetectionSettings(invalid);throw new Exception("Accepted invalid detection setting");}catch(ArgumentException){}}
+Check(store.DetectionSettings(config)==new DetectionSettings(2,0),"invalid detection settings leave saved configuration intact");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {

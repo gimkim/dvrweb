@@ -95,7 +95,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.10.3"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.10.4"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -182,6 +182,8 @@ app.MapGet("/api/users",(Store s)=>s.Users().Select(u=>new{u.Id,u.Username,u.Rol
 app.MapPost("/api/users",(UserInput input,Store s,HttpContext ctx)=>{var u=s.SaveUser(null,input);s.Audit(ctx.User.Identity!.Name!,"user.create",u.Username);return Results.Ok(new{u.Id});}).RequireAuthorization("admin");
 app.MapPut("/api/users/{id}",(string id,UserInput input,Store s,HttpContext ctx)=>{if(!s.Users().Any(u=>u.Id==id))throw new KeyNotFoundException();var u=s.SaveUser(id,input);s.Audit(ctx.User.Identity!.Name!,"user.update",u.Username);return Results.Ok();}).RequireAuthorization("admin");
 app.MapGet("/api/audit",(Store s)=>s.AuditRows()).RequireAuthorization("admin");
+app.MapGet("/api/detection-settings",(Store s,IConfiguration config)=>s.DetectionSettings(config)).RequireAuthorization("admin");
+app.MapPut("/api/detection-settings",(DetectionSettings value,Store s,HttpContext ctx)=>{try{s.SaveDetectionSettings(value);s.Audit(ctx.User.Identity!.Name!,"detection.settings",System.Text.Json.JsonSerializer.Serialize(value));return Results.Ok(value);}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization("admin");
 app.MapGet("/api/stream-settings",(Store s)=>s.StreamSettings()).RequireAuthorization("admin");
 app.MapPut("/api/stream-settings",(LiveStreamSettings value,Store s,HttpContext ctx)=>{try{s.SaveStreamSettings(value);s.Audit(ctx.User.Identity!.Name!,"stream.settings",System.Text.Json.JsonSerializer.Serialize(value));return Results.Ok(value);}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization("admin");
 app.MapGet("/api/system",(WebRtcService rtc)=>new{webrtc=rtc.Status(),machine=Environment.MachineName,dataRoot=paths.Data,ffmpeg=File.Exists(paths.Ffmpeg),httpsRequiredForMicrophone=true}).RequireAuthorization("admin");

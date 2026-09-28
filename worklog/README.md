@@ -121,3 +121,5 @@
 - [2026-09-29_01-55-45_live-startup-graphic.md](2026-09-29_01-55-45_live-startup-graphic.md) — initial live loading graphic
 
 - [2026-09-29_02-19-01_detection-concurrency-readrate.md](2026-09-29_02-19-01_detection-concurrency-readrate.md) — bounded concurrent detection and uncapped input
+
+- [2026-09-29_02-22-20_admin-detection-settings.md](2026-09-29_02-22-20_admin-detection-settings.md) — admin detection speed and worker settings
