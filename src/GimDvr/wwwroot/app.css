@@ -17,3 +17,5 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 @media(max-width:600px){.single-mode{display:none}.single-top{gap:10px}.single-top h2{font-size:16px}}
 /* Keep video nodes and their MediaSource sessions mounted while changing layout. */
 .live-grid .single-top,.live-grid .live-actions{display:none}.live-grid .single-camera .single-top,.live-grid .single-camera .live-actions{display:flex}.single-view .live-grid{display:block}.single-view main>.page-title,.single-view main>.note,.single-camera>.camera-top,.single-camera>.camera-bottom{display:none}.single-view .background-camera{position:fixed;left:-10000px;top:0;width:320px;height:180px;pointer-events:none;opacity:0}.single-view .single-camera{width:100%;height:100dvh}
+
+.apk-download{color:var(--mint);font-size:12px;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}.apk-download-row{text-align:center;margin-top:18px}.header-right>.apk-download{padding:8px}.android-app .apk-download,.android-app .apk-download-row{display:none}

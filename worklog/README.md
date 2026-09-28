@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-54-37_web-apk-download-link.md](2026-09-28_18-54-37_web-apk-download-link.md) — APK download links on login and signed-in header
+
 - [2026-09-28_18-51-04_android-shared-web-stream.md](2026-09-28_18-51-04_android-shared-web-stream.md) — Android1.0.1 shared web streaming player, signed APK update
 
 - [2026-09-28_18-48-54_preserve-live-layout-sessions.md](2026-09-28_18-48-54_preserve-live-layout-sessions.md) — preserve players and background streams across live layouts
