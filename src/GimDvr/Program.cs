@@ -87,8 +87,10 @@ app.Use(async(ctx,next)=>
     if(ctx.Request.Path.StartsWithSegments("/api"))ctx.Response.Headers.CacheControl="no-store";
     await next();
 });
-app.UseStaticFiles(new StaticFileOptions{OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.3.4"}));
+var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
+app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.4.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -98,7 +100,7 @@ app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
     var valid=user is not null&&user.Enabled&&Store.Verify(input.Password,user.Hash);store.LoginResult(key,valid);
     if(!valid)return Results.Json(new{error="ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"},statusCode:401);
     var claims=new[]{new Claim(ClaimTypes.NameIdentifier,user!.Id),new Claim(ClaimTypes.Name,user.Username),new Claim(ClaimTypes.Role,user.Role),new Claim("stamp",user.Stamp)};
-    await ctx.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims,CookieAuthenticationDefaults.AuthenticationScheme)),new AuthenticationProperties{IsPersistent=true,AllowRefresh=true});
+    await ctx.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims,CookieAuthenticationDefaults.AuthenticationScheme)),new AuthenticationProperties{IsPersistent=true,AllowRefresh=true,ExpiresUtc=input.RememberDevice?DateTimeOffset.UtcNow.AddYears(10):null});
     store.Audit(user.Username,"login",ctx.Connection.RemoteIpAddress?.ToString()??"");return Results.Ok(new{user.Username,user.Role});
 }).RequireRateLimiting("login");
 app.MapPost("/api/logout",async(HttpContext ctx)=>{await ctx.SignOutAsync();return Results.Ok();}).RequireAuthorization();

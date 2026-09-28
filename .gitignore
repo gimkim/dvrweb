@@ -15,3 +15,8 @@ evidence/
 **/*.sqlite
 **/keys/
 *.user
+
+**/*.keystore
+**/*.jks
+**/*.apk
+**/*.aab

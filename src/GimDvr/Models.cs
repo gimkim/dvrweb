@@ -42,7 +42,7 @@ public sealed record Camera
     }
 }
 public sealed record CameraInput(Camera Camera, string? Password);
-public sealed record LoginInput(string Username, string Password);
+public sealed record LoginInput(string Username, string Password,bool RememberDevice=false);
 public sealed record UserInput(string Username, string Role, bool Enabled, string? Password);
 public sealed record UserRow(string Id, string Username, string Hash, string Role, bool Enabled, string Stamp);
 public sealed record Recording(string Id, string CameraId, string CameraName, string Path, DateTimeOffset Start, double Duration, long Bytes);

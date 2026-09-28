@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_17-23-45_android-and-per-camera-viewing.md](2026-09-28_17-23-45_android-and-per-camera-viewing.md) — Android APK 1.0.0 and per-camera viewing, web 1.4.0
+
 - [2026-09-28_17-04-19_public-github-dvrweb.md](2026-09-28_17-04-19_public-github-dvrweb.md) — public GitHub repository
 - [2026-09-28_17-02-13_automatic-asset-url-versioning.md](2026-09-28_17-02-13_automatic-asset-url-versioning.md) — automatic asset URL versioning 1.3.4
 - [2026-09-28_16-58-45_live-video-minimal-controls.md](2026-09-28_16-58-45_live-video-minimal-controls.md) — live UI controls; static deployment

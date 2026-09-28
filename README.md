@@ -77,3 +77,14 @@ Version 1.3.4 automatically adds content-hash versions to HTML local asset URLs 
 ## Source repository and development setup
 
 Public source: https://github.com/gimkim/dvrweb. With .NET 10 and FFmpeg installed, copy src/GimDvr/appsettings.Development.example.json to appsettings.Development.json and adjust local paths, then run dotnet run --project src/GimDvr. The real development config and all database/keys/bootstrap/media/evidence files are excluded from Git. Historical worklogs reference local evidence that is not included in the public repository. Deployment/repair scripts contain NAS-specific paths and must be reviewed before use on another machine.
+
+
+## Android app and per-camera viewing
+
+Install [GimDVR 1.0.0 APK](https://gimgim.ddns.net/gimdvr/downloads/GimDVR-1.0.0.apk) on Android 8 or newer. The app opens the fixed server https://gimgim.ddns.net/gimdvr/ and uses your existing GimDVR login. It is a .NET Android WebView client, with no camera credentials or server-selection screen. Cameras stack vertically; fullscreen switches to landscape with a draggable camera-control panel. Android physical-device validation is still pending.
+
+The power switch before each camera name controls viewing on this device only. Preferences survive reopening and logout, separately per user/browser/app. It does not turn off recording or the camera. Android keeps a persistent login cookie (long-lived server ticket); explicit logout clears it. Clearing app data, reinstalling, platform expiration or server-side account/password changes can require login again.
+
+Build a signed update with `deployment/Build-Android.ps1`. Requires .NET 10 Android workload, SDK/build-tools 36 and JDK 17. Restore the original private `.local-data/android-signing/gimdvr.keystore` and `store.pass` first; never generate a different signing identity for an update. Output is `artifacts/android/GimDVR-<version>.apk`; script verifies its signature. Keep private signing material backed up outside Git. Increment ApplicationVersion/ApplicationDisplayVersion in the Android csproj for updates. APK artifacts and credentials are ignored by Git.
+
+Run web lifecycle checks with `node tests/live-session-checks.cjs` and backend checks with `dotnet run --project tests/GimDvr.Checks -c Release`.

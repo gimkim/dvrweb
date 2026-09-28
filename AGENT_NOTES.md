@@ -77,3 +77,12 @@ HTML ถูก render ด้วย SHA256 ?v= ของ local src/href/poster �
 ## Source repository
 
 Public repository: https://github.com/gimkim/dvrweb — source root คือโฟลเดอร์ dvrcam ที่มี .git ของตัวเอง ไม่ใช่ parent sysdiag ห้ามเพิ่ม artifacts/evidence/credentials/database/keys เข้าประวัติ Git ([worklog](worklog/2026-09-28_17-04-19_public-github-dvrweb.md))
+
+## Android และการเปิด/ปิดดูแต่ละกล้อง
+
+- Web 1.4.0 / APK 1.0.0: ปุ่มก่อนชื่อกล้องเปิด/ปิดเฉพาะการดูของอุปกรณ์นี้ จำ localStorage แยก user ID/camera ID ไม่เปลี่ยน recording หรือ enabled ของกล้อง และไม่กระทบ viewer อื่น
+- หนึ่ง live session ต่อกล้องเป็นเจ้าของ HLS/retry/listeners/heartbeat ต้องยกเลิกได้แม้ watch request ยังรออยู่; background Android หยุด session และ resume เฉพาะกล้องที่เลือก
+- Android เป็น .NET10 WebView ที่ fix HTTPS server /gimdvr/; CookieManager เก็บ cookie ไม่มี password ใน APK, RememberDevice ticket อายุ10ปีตาม server แต่ platform expiration/ล้างข้อมูล/เปลี่ยนรหัสหรือสิทธิ์ยังทำให้ต้อง login ใหม่
+- แนวตั้งเรียงกล้องลงมา; fullscreen เป็น native landscape + CSS wrapper มี control dialog ลากได้ ต้องย้าย dialog กลับ body ก่อนลบ card เสมอ
+- APK net.gimgim.gimdvr, Android8+, arm64/arm/x64; ใช้ deployment/Build-Android.ps1 กับ signing key เดิมที่ .local-data/android-signing ห้าม commit key/pass/APK และต้อง apksigner verify ทุก build
+- Web/backend fixture, NAS health/hash และ APK signature ผ่าน; ยังไม่มีการติดตั้ง/หมุนจอ/ทดสอบ cookie บนอุปกรณ์ Android จริง ([worklog](worklog/2026-09-28_17-23-45_android-and-per-camera-viewing.md))
