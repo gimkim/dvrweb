@@ -17,6 +17,7 @@ builder.Services.AddDataProtection().SetApplicationName("GimDvr").PersistKeysToF
 builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraClient>();
 builder.Services.AddSingleton<PtzService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<PtzService>());
 builder.Services.AddSingleton<MediaService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<MediaService>());
+builder.Services.AddHostedService<DetectionService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o=>
 {
     o.Cookie.Name="GimDvr.Session";o.Cookie.Path=builder.Configuration["Dvr:PathBase"]??"/gimdvr";o.Cookie.HttpOnly=true;o.Cookie.SameSite=SameSiteMode.Strict;o.Cookie.SecurePolicy=builder.Environment.IsDevelopment()?CookieSecurePolicy.SameAsRequest:CookieSecurePolicy.Always;
@@ -90,7 +91,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.7.0"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.8.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -162,9 +163,9 @@ app.MapGet("/api/recording-range",(string? camera,DateTimeOffset? from,DateTimeO
 {
     if(string.IsNullOrWhiteSpace(camera)||from is null||to is null||to<=from||offset is <0)return Results.BadRequest(new{error="เลือกกล้องและช่วงเวลาเริ่มก่อนเวลาสิ้นสุด"});
     s.Camera(camera);
-    return Results.Ok(s.RecordingRange(camera,from.Value,to.Value,offset??0).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes}));
+    return Results.Ok(s.WithDetection(s.RecordingRange(camera,from.Value,to.Value,offset??0)).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes,r.Detection}));
 }).RequireAuthorization();
-app.MapGet("/api/recordings",(string? camera,DateTimeOffset? from,DateTimeOffset? to,int? limit,Store s)=>s.Recordings(camera,from,to,Math.Clamp(limit??500,1,2000)).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes})).RequireAuthorization();
+app.MapGet("/api/recordings",(string? camera,DateTimeOffset? from,DateTimeOffset? to,int? limit,Store s)=>s.WithDetection(s.Recordings(camera,from,to,Math.Clamp(limit??500,1,2000))).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes,r.Detection})).RequireAuthorization();
 app.MapGet("/api/recordings/{id}/video",(string id,Store s)=>{var r=s.Recording(id);return File.Exists(r.Path)?Results.File(r.Path,"video/mp4",enableRangeProcessing:true):Results.NotFound();}).RequireAuthorization();
 app.MapGet("/api/users",(Store s)=>s.Users().Select(u=>new{u.Id,u.Username,u.Role,u.Enabled})).RequireAuthorization("admin");
 app.MapPost("/api/users",(UserInput input,Store s,HttpContext ctx)=>{var u=s.SaveUser(null,input);s.Audit(ctx.User.Identity!.Name!,"user.create",u.Username);return Results.Ok(new{u.Id});}).RequireAuthorization("admin");

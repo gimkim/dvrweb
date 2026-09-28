@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace GimDvr;
 
-public sealed class Store
+public sealed partial class Store
 {
     readonly string connection;
     readonly IDataProtector protector;
@@ -23,6 +23,8 @@ public sealed class Store
         CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT UNIQUE COLLATE NOCASE,hash TEXT,role TEXT,enabled INTEGER,stamp TEXT);
         CREATE TABLE IF NOT EXISTS recordings(id TEXT PRIMARY KEY,cameraId TEXT,cameraName TEXT,path TEXT UNIQUE,start TEXT,duration REAL,bytes INTEGER);
         CREATE INDEX IF NOT EXISTS ix_recordings_camera_start ON recordings(cameraId,start);
+        CREATE TABLE IF NOT EXISTS detections(recordingId TEXT PRIMARY KEY,state TEXT NOT NULL,result TEXT,attempts INTEGER NOT NULL DEFAULT 0,updated TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS ix_detections_state ON detections(state,updated);
         CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY,failures INTEGER,until TEXT);
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,time TEXT,actor TEXT,action TEXT,detail TEXT);
         """;
@@ -135,7 +137,7 @@ public sealed class Store
         using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="SELECT * FROM recordings WHERE id=$id";Param(cmd,"$id",id);using var r=cmd.ExecuteReader();
         if(!r.Read())throw new KeyNotFoundException("ไม่พบวิดีโอ");return new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),DateTimeOffset.Parse(r.GetString(4)),r.GetDouble(5),r.GetInt64(6));
     }
-    public void ForgetRecording(string id){using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="DELETE FROM recordings WHERE id=$id";Param(cmd,"$id",id);cmd.ExecuteNonQuery();}
+    public void ForgetRecording(string id){using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="DELETE FROM detections WHERE recordingId=$id; DELETE FROM recordings WHERE id=$id";Param(cmd,"$id",id);cmd.ExecuteNonQuery();}
     public void Audit(string actor,string action,string detail)
     {using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="INSERT INTO audit(time,actor,action,detail) VALUES($time,$actor,$action,$detail)";Param(cmd,"$time",DateTimeOffset.UtcNow.ToString("O"));Param(cmd,"$actor",actor);Param(cmd,"$action",action);Param(cmd,"$detail",detail);cmd.ExecuteNonQuery();}
     public object AuditRows(){using var db=Open();using var cmd=db.CreateCommand();cmd.CommandText="SELECT time,actor,action,detail FROM audit ORDER BY id DESC LIMIT 200";using var r=cmd.ExecuteReader();List<object> rows=[];while(r.Read())rows.Add(new{time=r.GetString(0),actor=r.GetString(1),action=r.GetString(2),detail=r.GetString(3)});return rows;}

@@ -45,7 +45,11 @@ public sealed record CameraInput(Camera Camera, string? Password);
 public sealed record LoginInput(string Username, string Password,bool RememberDevice=false);
 public sealed record UserInput(string Username, string Role, bool Enabled, string? Password);
 public sealed record UserRow(string Id, string Username, string Hash, string Role, bool Enabled, string Stamp);
-public sealed record Recording(string Id, string CameraId, string CameraName, string Path, DateTimeOffset Start, double Duration, long Bytes);
+public sealed record Recording(string Id, string CameraId, string CameraName, string Path, DateTimeOffset Start, double Duration, long Bytes)
+{
+    public DetectionResult? Detection { get; init; }
+}
+public sealed record DetectionResult(string State, bool? Motion = null, bool? Human = null, int Frames = 0, int HumanSamples = 0, double Confidence = 0, string? Device = null, string? Decoder = null, string? Error = null, string Version = "nas-person-v1");
 public sealed record ControlInput(string Action, int Value = 0);
 public sealed class Paths(IConfiguration config, IWebHostEnvironment env)
 {

@@ -13,6 +13,7 @@ var paths=new Paths(builder.Configuration,env);
 builder.Services.AddSingleton(paths);
 builder.Services.AddDataProtection().SetApplicationName("GimDvr").PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Data,"keys")));
 builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraClient>();builder.Services.AddHostedService<MediaService>();
+builder.Services.AddHostedService<DetectionService>();
 builder.Services.Configure<HostOptions>(o=>o.ShutdownTimeout=TimeSpan.FromSeconds(35));
 await builder.Build().RunAsync();
 

@@ -1,6 +1,6 @@
 # GimDVR — Agent notes
 
-ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.7.0 (copy-only fMP4 ทุกโหมด, 100ms fragments / 200ms buffer)
+ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.8.0 (copy-only fMP4 ทุกโหมด, 100ms fragments / 200ms buffer)
 
 เอกสารนี้สรุป concept และหลักการปัจจุบัน ต้องอ่านคู่กับ [AGENTS.md](AGENTS.md) และ [ดัชนี worklog](worklog/README.md) รายละเอียดการทดลองเก่าไม่ใช่ข้อกำหนดปัจจุบัน เมื่อผู้ใช้เปลี่ยนแนวทางให้แก้สรุปนี้และสร้าง worklog ไฟล์ใหม่
 
@@ -117,3 +117,9 @@ Fullscreenต้องมีปุ่มกลับหน้ารวมภา�
 Mobile recordings: Android shell exposes Live/Recordings tabs; web retains sidebar navigation. Mobile search/cards/player fit narrow screens. Detection configuration is not an event: current recordings have no event timeline, so absence of metadata means unknown. Vendor alarm push exists on some models, but these cameras remain unverified ([worklog](worklog/2026-09-28_19-10-18_mobile-recordings-detection-review.md)).
 
 Eye4 static RE found separate local sensor logs, cloud events and SD filename motion markers; never infer event labels from NAS-generated filenames. Human capability uses additional2017/2126/2127 queries beyond current2106 probe; prior missing2106 data is inconclusive. Android sample authenticity remains unverified. See [research](docs/eye4-protocol-findings.md) and [worklog](worklog/2026-09-28_19-20-49_eye4-reverse-engineering.md).
+
+## NAS recording detection (1.8.0)
+
+วิเคราะห์ไฟล์ MP4 ที่บันทึกเสร็จแล้วใน background ไม่เปิด RTSP เพิ่มและไม่ encode วิดีโอ One persistent Python/OpenVINO worker, one clip globally, hardware decode D3D11VA with single-thread CPU fallback;2fps small-frame motion,1fps person inference when active/5s idle scan. GPU preferred, CPU inference1thread fallback. ผลตามหลังไฟล์ปิด+queue;ทยอยbackfillคลิปเก่าโดยไม่แก้ไฟล์วิดีโอ แยกtrue/false/nullและcoverageในSQLite detections;failed/partialไม่แปลว่าไม่มีคน Scene-change suppressionเป็นheuristic ยังมีfalsepositive/negativeได้
+
+Default runtime outside web root: C:\Users\tatsa\web-data\GimDvrDetection. App1.8.0 and worker register DetectionService with file owner lock; web proxy skips when external worker configured. Shared web/Android results usecompactrows and SVG Motion/Human badges;APK1.0.1ไม่ต้องbuildใหม่. Camera-event metadata from Eye4 remains a separate unimplemented source; these labels now come from NAS sampled analysis. [Design](docs/nas-detection.md), [worklog](worklog/2026-09-28_19-50-36_nas-detection-compact-recordings.md).

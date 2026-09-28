@@ -133,6 +133,21 @@ using(var provider=new PhysicalFileProvider(assetRoot))
  Check(html.Contains("app.js?v=")&&!html.Contains("v=manual")&&html.Contains("talk-worklet.js?v="),"HTML and dynamic worklet URLs are versioned");
  Check(versions.Url("https://example.org/app.js")=="https://example.org/app.js"&&versions.Url("#anchor")=="#anchor","external and anchor URLs remain intact");
 }
+var unknown=store.WithDetection(ranged).First();
+Check(unknown.Detection is {State:"pending",Motion:null,Human:null},"unanalysed recording is unknown, not no motion");
+store.SaveDetection(unknown.Id,new("processing"));
+store.ResetInterruptedDetections();
+Check(store.WithDetection(ranged).First().Detection?.State=="pending","interrupted analysis returns to pending");
+store.SaveDetection(unknown.Id,new("complete",true,false,120,20,0.1,"fixture","fixture"));
+Check(store.WithDetection(ranged).First().Detection is {Motion:true,Human:false,Frames:120},"SQLite persists independent motion/person flags and coverage");
+Check(new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys")))) .WithDetection(ranged).First().Detection?.Motion==true,"detection survives store recreation/schema initialization");
+store.SaveDetection("range-inside",new("partial",false,null,120,0,0,null,"fixture","model_unavailable"));
+Check(store.WithDetection(ranged)[1].Detection is {State:"partial",Human:null},"unavailable person detector retains unknown instead of false");
+store.ForgetRecording(unknown.Id);
+store.AddRecording(unknown);
+Check(store.WithDetection([unknown]).Single().Detection?.State=="pending","retention removes detection result with recording");
+store.SaveDetection("not-catalogued",new("complete",true,true));
+Check(store.WithDetection([unknown with{Id="not-catalogued"}]).Single().Detection?.State=="pending","cannot create orphan detection for deleted recording");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {
