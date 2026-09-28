@@ -95,3 +95,5 @@
 - [2026-09-28_19-14-56-camera-stream-options.md](2026-09-28_19-14-56-camera-stream-options.md) — camera main/substream options and current copy-stream clarification
 
 - [2026-09-28_21-57-51_recording-filters-download.md](2026-09-28_21-57-51_recording-filters-download.md) — Motion/Human result filters and recording downloads
+
+- [2026-09-28_21-59-28_live-only-status.md](2026-09-28_21-59-28_live-only-status.md) — show only live status

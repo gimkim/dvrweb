@@ -133,3 +133,5 @@ Detection diagnostics1.8.1: DataRoot/logs/detection/*.jsonl, perclip timing/resu
 Recording detection results refresh every10s while unfinished results are displayed, updating only badges/count without resetting playback. Cancel/invalidate on filter/search/navigation/logout; skip hidden pages and stop when all displayed results are complete. Shared web/Android assets, no APK rebuild. Passive logs confirmed the apparent stall was stale UI while the worker continued; throughput/backlog remain distinct. [worklog](worklog/2026-09-28_20-25-29_detection-results-refresh.md).
 
 Recording results filter by positive Motion/Human evidence; both selected means OR, neither means all. Playlist navigation respects the filter and metadata refresh does not reset playback. Downloads serve original catalogued MP4 via authenticated attachment endpoint. Web support; native APK download integration remains separate. [worklog](worklog/2026-09-28_21-57-51_recording-filters-download.md).
+
+Live status now renders only live when playing; buffering/waiting is blank. Shared web/Android UI; internal buffering behavior unchanged. [worklog](worklog/2026-09-28_21-59-28_live-only-status.md).
