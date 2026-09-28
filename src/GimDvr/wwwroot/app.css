@@ -55,3 +55,5 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 @media(max-width:650px){.recording-stamp{display:block;line-height:1.3}.recording-stamp small{display:block;font-size:10px}.recording-row{gap:6px;padding:5px 0}.recording-results .recording-row button{min-height:44px}.recording-panel>p.muted{font-size:11px;margin:8px 0}#recordingFilter .toolbar{gap:8px}#recordingTimes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#recordingTimes label{font-size:12px}#recordingTimes input{width:100%;font-size:12px;padding:7px 3px}}
 
 .recording-row[hidden]{display:none}.recording-download{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;padding:6px 10px;border:1px solid var(--border,#34464d);border-radius:8px;text-decoration:none;flex-shrink:0;box-sizing:border-box}.recording-download svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.recording-summary .check{display:inline-flex;align-items:center;gap:5px}.recording-summary .check input{width:auto}
+
+#recordingTimes[hidden],#recordingTimeHint[hidden],#recordingList[hidden]{display:none}

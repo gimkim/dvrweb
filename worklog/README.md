@@ -97,3 +97,5 @@
 - [2026-09-28_21-57-51_recording-filters-download.md](2026-09-28_21-57-51_recording-filters-download.md) — Motion/Human result filters and recording downloads
 
 - [2026-09-28_21-59-28_live-only-status.md](2026-09-28_21-59-28_live-only-status.md) — show only live status
+
+- [2026-09-28_22-03-05_progressive-recording-search.md](2026-09-28_22-03-05_progressive-recording-search.md) — progressive camera then time selection

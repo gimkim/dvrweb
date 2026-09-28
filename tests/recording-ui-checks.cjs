@@ -12,9 +12,10 @@ const ctx=vm.createContext({setTimeout(fn){pendingTimer=fn;return 1;},clearTimeo
 vm.runInContext(source.slice(source.indexOf('function detectionIcons('),source.indexOf('async function renderUsers')),ctx);
 (async()=>{
  ctx.renderRecordings();const html=$('#main').innerHTML;
- assert.match(html,/id="recordingTimes" disabled/);
+ assert.match(html,/id="recordingTimes" disabled hidden/);assert.match(html,/id="recordingTimeHint" class="muted" hidden/);assert.match(html,/id="recordingList" hidden/);
  const dates=[...html.matchAll(/type="datetime-local"[^>]*value="([^"]+)"/g)].map(m=>new Date(m[1]));assert.equal(dates[1]-dates[0],3600000);
- form.elements.camera.onchange();assert.equal($('#recordingTimes').disabled,false);
+ form.elements.camera.onchange();assert.equal($('#recordingTimes').disabled,false);assert.equal($('#recordingTimes').hidden,false);assert.equal($('#recordingTimeHint').hidden,false);assert.equal($('#recordingList').hidden,false);
+ form.elements.camera.value='';form.elements.camera.onchange();assert.equal($('#recordingTimes').hidden,true);assert.equal($('#recordingTimes').disabled,true);form.elements.camera.value='a';form.elements.camera.onchange();
  console.log('PASS select camera first and default last hour');
  await ctx.loadRecordings();assert.match(query,/camera=a/);assert.match(query,/from=/);assert.match($('#recordingList').innerHTML,/class="recording-row"/);
  $('#playAll').onclick();assert.equal($('#autoNext').checked,true);assert.equal(video.src,'api/recordings/one/video');assert.equal($('#player').open,true);video.onloadedmetadata();assert.equal(video.currentTime,20);

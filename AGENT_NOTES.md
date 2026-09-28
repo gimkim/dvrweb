@@ -135,3 +135,5 @@ Recording detection results refresh every10s while unfinished results are displa
 Recording results filter by positive Motion/Human evidence; both selected means OR, neither means all. Playlist navigation respects the filter and metadata refresh does not reset playback. Downloads serve original catalogued MP4 via authenticated attachment endpoint. Web support; native APK download integration remains separate. [worklog](worklog/2026-09-28_21-57-51_recording-filters-download.md).
 
 Live status now renders only live when playing; buffering/waiting is blank. Shared web/Android UI; internal buffering behavior unchanged. [worklog](worklog/2026-09-28_21-59-28_live-only-status.md).
+
+Recordings search reveals time inputs/actions and time hint only after a camera is selected; initially show camera selection alone. Shared web/Android UI. [worklog](worklog/2026-09-28_22-03-05_progressive-recording-search.md).
