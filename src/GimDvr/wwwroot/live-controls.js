@@ -20,8 +20,9 @@ function saveLiveFrame(video,wrap){
 }
 function bindLiveControls(wrap){
  const video=wrap.querySelector('video'),mute=wrap.querySelector('[data-live-mute]'),full=wrap.querySelector('[data-live-fullscreen]');let active=true;
- const snapshot=wrap.querySelector('[data-live-snapshot]');
- if(snapshot)snapshot.onclick=()=>{try{saveLiveFrame(video,wrap);snapshot.title='เซฟภาพปัจจุบัน';}catch(e){snapshot.title=e.message;if(typeof toast==='function')toast(e.message);}};
+ const snapshotRoot=wrap.closest?.('.camera-card')||wrap;
+ const snapshots=snapshotRoot.querySelectorAll?Array.from(snapshotRoot.querySelectorAll('[data-live-snapshot]')):[];
+ snapshots.forEach(snapshot=>snapshot.onclick=()=>{try{saveLiveFrame(video,wrap);snapshot.title='เซฟภาพปัจจุบัน';}catch(e){snapshot.title=e.message;if(typeof toast==='function')toast(e.message);}});
  video.controls=false;video.disablePictureInPicture=true;video.disableRemotePlayback=true;
  const soundState=()=>{if(!mute)return;const label=video.muted?'เปิดเสียง':'ปิดเสียง';mute.textContent=video.muted?'🔇':'🔊';mute.title=label;mute.setAttribute('aria-label',label);};
  const fullState=()=>{const selected=liveFullscreenWrap()===wrap,label=selected?'ออกจากเต็มจอ':'เต็มจอ';full.title=label;full.setAttribute('aria-label',label);if(document.fullscreenElement===wrap)window.onLiveFullscreenChanged?.(wrap);else if(!liveFullscreenWrap()&&wrap.contains(document.getElementById('controls')))window.onLiveFullscreenChanged?.(null);};
@@ -35,5 +36,5 @@ function bindLiveControls(wrap){
  }catch{full.title='เบราว์เซอร์ไม่อนุญาตให้เปิดเต็มจอ';}};
  video.addEventListener('volumechange',soundState);video.addEventListener('contextmenu',contextMenu);
  document.addEventListener('fullscreenchange',fullState);document.addEventListener('gimdvrfullscreenchange',fullState);soundState();fullState();
- return {destroy(){active=false;if(snapshot)snapshot.onclick=null;if(liveFullscreenWrap()===wrap)window.exitLiveFullscreen();if(mute)mute.onclick=null;full.onclick=null;video.removeEventListener('volumechange',soundState);video.removeEventListener('contextmenu',contextMenu);document.removeEventListener('fullscreenchange',fullState);document.removeEventListener('gimdvrfullscreenchange',fullState);}};
+ return {destroy(){active=false;snapshots.forEach(snapshot=>snapshot.onclick=null);if(liveFullscreenWrap()===wrap)window.exitLiveFullscreen();if(mute)mute.onclick=null;full.onclick=null;video.removeEventListener('volumechange',soundState);video.removeEventListener('contextmenu',contextMenu);document.removeEventListener('fullscreenchange',fullState);document.removeEventListener('gimdvrfullscreenchange',fullState);}};
 }

@@ -115,3 +115,5 @@
 - [2026-09-29_00-32-13_recording-storage-estimate.md](2026-09-29_00-32-13_recording-storage-estimate.md) — current per-camera recording storage estimate
 
 - [2026-09-29_01-03-05_live-snapshot-button.md](2026-09-29_01-03-05_live-snapshot-button.md) — save displayed live frame in both layouts
+
+- [2026-09-29_01-04-44_snapshot-next-to-controls.md](2026-09-29_01-04-44_snapshot-next-to-controls.md) — snapshot beside controls
