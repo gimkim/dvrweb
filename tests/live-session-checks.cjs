@@ -7,7 +7,7 @@ class FakeHls {
  static isSupported(){return true;}static Events={MANIFEST_PARSED:'manifest',ERROR:'error'};static ErrorTypes={MEDIA_ERROR:'media'};
  constructor(options){this.options=options;this.destroyed=false;encoders.push(this);}loadSource(src){this.src=src;}attachMedia(v){this.video=v;}on(){}destroy(){this.destroyed=true;}
 }
-const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{addEventListener(){},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:(path)=>{requests.push(path);return new Promise((resolve,reject)=>pending.push({resolve,reject}));},isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
+const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{dataset:{},events:{},addEventListener(k,f){this.events[k]=f;},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:(path)=>{requests.push(path);return new Promise((resolve,reject)=>pending.push({resolve,reject}));},isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
 context.startLiveStream=(video,id)=>{const player=new FakeHls({rtc:true});player.attachMedia(video);player.src='api/cameras/'+id+'/webrtc';return player;};
 vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=liveSessions;',context);
 (async()=>{
@@ -17,7 +17,7 @@ vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=li
  console.log('PASS late failed request after stop is ignored');
  for(const camera of ['a','b','c']){const p=context.connectLive({id:camera});pending.shift().resolve();await p;}
  assert.equal(encoders[0].options.rtc,true);assert.equal(encoders[0].src,'api/cameras/a/webrtc');console.log('PASS overview selects shared WebRTC-first player');
- assert.equal(intervals.size,3);context.sessions.get('b').destroy();assert.equal(intervals.size,2);assert.equal(encoders[1].destroyed,true);assert.equal(encoders[0].destroyed,false);assert.equal(encoders[2].destroyed,false);
+ assert.equal(videos.get('v-a').dataset.starting,'true');videos.get('v-a').events.playing();assert.equal(videos.get('v-a').dataset.starting,'false');videos.get('v-a').events.waiting();assert.equal(videos.get('v-a').dataset.starting,'false');console.log('PASS startup graphic hides after playing and stays hidden on rebuffer');assert.equal(intervals.size,3);context.sessions.get('b').destroy();assert.equal(intervals.size,2);assert.equal(encoders[1].destroyed,true);assert.equal(encoders[0].destroyed,false);assert.equal(encoders[2].destroyed,false);
  console.log('PASS stopping one camera leaves other two players and heartbeats alive');
  const replacement=context.connectLive({id:'a'});assert.equal(encoders[0].destroyed,true);pending.shift().resolve();await replacement;assert.equal(intervals.size,2);
  context.sessions.forEach(s=>s.destroy());assert.equal(intervals.size,0);assert.equal(context.sessions.size,0);assert.ok(encoders.every(e=>e.destroyed));

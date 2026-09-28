@@ -117,3 +117,5 @@
 - [2026-09-29_01-03-05_live-snapshot-button.md](2026-09-29_01-03-05_live-snapshot-button.md) — save displayed live frame in both layouts
 
 - [2026-09-29_01-04-44_snapshot-next-to-controls.md](2026-09-29_01-04-44_snapshot-next-to-controls.md) — snapshot beside controls
+
+- [2026-09-29_01-55-45_live-startup-graphic.md](2026-09-29_01-55-45_live-startup-graphic.md) — initial live loading graphic

@@ -151,3 +151,5 @@ Current allowlist also uses external Dvr:WebRtcClockFps=15 to regularize only We
 Live snapshot button captures current video frame client-side as native-resolution JPEG; no camera snapshot endpoint or playback interruption. Shared overview/single wrapper, SVG icon. Web code-tested; native Android download unsupported/unverified. [worklog](worklog/2026-09-29_01-03-05_live-snapshot-button.md).
 
 Snapshot placement: overview footer beside Control; single/fullscreen bottom actions beside Control. No separate top-right snapshot overlay.
+
+Initial live startup uses shared spinner/short label covering native poster until playing; rebuffer after first playback does not re-cover image. Layout switching preserves state; new viewing session resets it.

@@ -1,0 +1,5 @@
+# Initial live stream graphic
+
+User requests consistent waiting graphic instead of Android grey play poster or desktop black screen. Shared live wrapper now shows dark background, mint CSS spinner and short Thai starting label while initial watch/transport/buffer is pending. Video opacity hides native poster during startup only. Playing or transport-confirmed live hides graphic; later waiting does not bring it back. Stop hides it, reopening resets it, layout changes preserve state. Applies web/hosted Android UI, overview/single, WebRTC/fMP4. Reduced-motion rule and accessible status included. No buffer/timing changes.
+
+Validation:7session lifecycle checks including new startup/playing/rebuffer assertion,4mode and3layout checks pass; JS syntax/diff pass. Static NAS deployment hashes match; backup startup-graphic directory under web-setup/GimDvr. No binary restart or recording changes. No real browser/physical Android test per user testing policy. Existing APK receives shared web assets.
