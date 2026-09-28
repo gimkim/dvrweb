@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_20-07-24_detection-throughput-boundary.md](2026-09-28_20-07-24_detection-throughput-boundary.md) — three-camera throughput threshold and pending NAS initialization
+
 - [2026-09-28_19-50-36_nas-detection-compact-recordings.md](2026-09-28_19-50-36_nas-detection-compact-recordings.md) — NAS motion/person worker, SQLite results, compact web/app badges
 
 - [2026-09-28_19-47-25_nas-detection-feasibility.md](2026-09-28_19-47-25_nas-detection-feasibility.md) — low-load NAS motion/person detection design and limits
