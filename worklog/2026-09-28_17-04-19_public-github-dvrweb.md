@@ -17,3 +17,7 @@
 ## ผลและขั้นตอน
 สร้างpublicrepoและoriginแล้ว เตรียมinitialcommitและpushmain; บันทึกผลยืนยันremoteในentryนี้เพิ่มเติมหลังpush
 ไม่มีNASdeployment/restart/configurationchangeจากงานนี้ ประวัติnotes/worklogเผยแพร่พร้อมsource ส่วนภาพหลักฐานและไฟล์บันทึกเป็นlocal-only จึงอาจไม่มีปลายทางevidenceในclone
+
+## ยืนยันผลหลัง push
+Initial commit e8325c29086010b36eaad0ecfb5b0d36550d0d7f pushไปorigin/mainสำเร็จ; git ls-remoteตรงกับlocalcommit; GitHubรายงานvisibility=PUBLICและdefaultBranch=main ตรวจtrackedfilesไม่รวมข้อมูลที่ignoreไว้ บันทึกผลนี้เป็นdocumentationfollow-upcommitในsessionเดียวกัน
+
