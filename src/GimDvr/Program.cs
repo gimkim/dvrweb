@@ -92,7 +92,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.9.1"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.9.2"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -167,6 +167,7 @@ app.MapGet("/api/recording-range",(string? camera,DateTimeOffset? from,DateTimeO
     return Results.Ok(s.WithDetection(s.RecordingRange(camera,from.Value,to.Value,offset??0)).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes,r.Detection}));
 }).RequireAuthorization();
 app.MapGet("/api/recordings",(string? camera,DateTimeOffset? from,DateTimeOffset? to,int? limit,Store s)=>s.WithDetection(s.Recordings(camera,from,to,Math.Clamp(limit??500,1,2000))).Select(r=>new{r.Id,r.CameraId,r.CameraName,r.Start,r.Duration,r.Bytes,r.Detection})).RequireAuthorization();
+app.MapGet("/api/recordings/{id}/download",(string id,Store s)=>{var r=s.Recording(id);return File.Exists(r.Path)?Results.File(r.Path,"video/mp4",fileDownloadName:$"recording-{r.Start:yyyyMMdd-HHmmss}.mp4",enableRangeProcessing:true):Results.NotFound();}).RequireAuthorization();
 app.MapGet("/api/recordings/{id}/video",(string id,Store s)=>{var r=s.Recording(id);return File.Exists(r.Path)?Results.File(r.Path,"video/mp4",enableRangeProcessing:true):Results.NotFound();}).RequireAuthorization();
 app.MapGet("/api/users",(Store s)=>s.Users().Select(u=>new{u.Id,u.Username,u.Role,u.Enabled})).RequireAuthorization("admin");
 app.MapPost("/api/users",(UserInput input,Store s,HttpContext ctx)=>{var u=s.SaveUser(null,input);s.Audit(ctx.User.Identity!.Name!,"user.create",u.Username);return Results.Ok(new{u.Id});}).RequireAuthorization("admin");

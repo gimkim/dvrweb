@@ -8,7 +8,7 @@ const form=$('#recordingFilter');form.elements={camera:{value:'a'},from:{value:'
 const rows=[{id:'one',cameraName:'A',start:new Date('2026-09-28T10:00:00').toISOString(),duration:60,bytes:1000},{id:'two',cameraName:'A',start:new Date('2026-09-28T10:01:00').toISOString(),duration:60,bytes:1000}];
 let pendingTimer,queries=0,reply=rows;
 let query;const buttons=[{dataset:{play:'0'}},{dataset:{play:'1'}}];
-const ctx=vm.createContext({setTimeout(fn){pendingTimer=fn;return 1;},clearTimeout(){pendingTimer=null;},$,Date,URLSearchParams,FormData:class{get(k){return form.elements[k].value;}},clips:[],clipIndex:0,cameras:[{id:'a',name:'A'}],page:'recordings',esc:String,title:()=>'',toast(){},document:{querySelectorAll:()=>buttons},api:async q=>{queries++;query=q;return reply;}});
+const ctx=vm.createContext({setTimeout(fn){pendingTimer=fn;return 1;},clearTimeout(){pendingTimer=null;},$,Date,URLSearchParams,FormData:class{get(k){return form.elements[k].value;}},clips:[],clipIndex:0,cameras:[{id:'a',name:'A'}],page:'recordings',esc:String,title:()=>'',toast(){},document:{querySelectorAll:q=>q==='[data-play]'?buttons:[]},api:async q=>{queries++;query=q;return reply;}});
 vm.runInContext(source.slice(source.indexOf('function detectionIcons('),source.indexOf('async function renderUsers')),ctx);
 (async()=>{
  ctx.renderRecordings();const html=$('#main').innerHTML;
@@ -37,6 +37,20 @@ vm.runInContext(source.slice(source.indexOf('function detectionIcons('),source.i
  assert.match($('[data-detection-index="0"]').innerHTML,/Motion: พบ/);
  assert.equal($('#detectionCount').textContent,'ตรวจแล้ว 2/2');assert.equal(video.src,currentSrc);assert.equal(video.currentTime,23);assert.equal(pendingTimer,null);
  console.log('PASS delayed results update badges/count and stop polling on completion without replacing playback');
+ assert.equal($('#downloadClip').href,'api/recordings/one/download');
+ assert.match($('#recordingList').innerHTML,/api\/recordings\/two\/download/);
+ assert.match(index,/id="downloadClip"[^>]*download/);
+ const backend=fs.readFileSync('src/GimDvr/Program.cs','utf8');
+ assert.match(backend,/MapGet\("\/api\/recordings\/\{id\}\/download"[^\n]+fileDownloadName:[^\n]+RequireAuthorization\(\)/);
+ ctx.clips[0].detection={state:'complete',motion:true,human:false};ctx.clips[1].detection={state:'complete',motion:false,human:true};
+ $('#filterMotion').checked=true;ctx.applyRecordingFilters();assert.deepEqual(Array.from(ctx.filteredClipIndices()),[0]);
+ $('#filterHuman').checked=true;ctx.applyRecordingFilters();assert.deepEqual(Array.from(ctx.filteredClipIndices()),[0,1]);
+ $('#filterMotion').checked=false;ctx.applyRecordingFilters();$('#playAll').onclick();assert.equal(video.src,'api/recordings/two/video');assert.equal($('#downloadClip').href,'api/recordings/two/download');
+ ctx.adjacentClip(false);assert.equal(video.src,'api/recordings/two/video');
+ ctx.clips[1].detection={state:'partial',human:null};ctx.applyRecordingFilters();assert.equal($('#playAll').disabled,true);assert.equal($('#noFilteredClips').hidden,false);
+ ctx.clips[1].detection={state:'partial',human:true};const filteredSrc=video.src;ctx.applyRecordingFilters();assert.equal($('#playAll').disabled,false);assert.equal(video.src,filteredSrc);
+ $('#filterHuman').checked=false;
+ console.log('PASS OR detection filters, unknown exclusion, filtered playlist and selected-clip authenticated download');
  reply=rows.map(r=>({...r,detection:null}));await ctx.loadRecordings();const stale=pendingTimer;ctx.resetRecordingResults();const before=queries;await stale();assert.equal(queries,before);
  console.log('PASS changed filter cancels stale scheduled work');
  await ctx.loadRecordings();ctx.page='live';const left=pendingTimer;await left();assert.equal(queries,before+1);ctx.page='recordings';

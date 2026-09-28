@@ -88,6 +88,15 @@ function detectionIcons(d){
 let recordingQuery=0,clipRange=null,clipFinished=false,recordingRefreshTimer;
 function stopRecordingRefresh(){clearTimeout(recordingRefreshTimer);recordingQuery++;}
 function updateDetectionCount(){const n=$('#detectionCount');if(n)n.textContent=`ตรวจแล้ว ${clips.filter(r=>r.detection?.state==='complete').length}/${clips.length}`;}
+function filteredClipIndices(){const motion=$('#filterMotion')?.checked,human=$('#filterHuman')?.checked;return clips.flatMap((r,i)=>!motion&&!human||motion&&r.detection?.motion===true||human&&r.detection?.human===true?[i]:[]);}
+function applyRecordingFilters(){
+ const visible=new Set(filteredClipIndices());
+ document.querySelectorAll('[data-recording-index]').forEach(row=>row.hidden=!visible.has(Number(row.dataset.recordingIndex)));
+ if($('#resultCount'))$('#resultCount').textContent=`${visible.size}/${clips.length} ไฟล์`;
+ if($('#playAll'))$('#playAll').disabled=!visible.size;
+ if($('#noFilteredClips'))$('#noFilteredClips').hidden=visible.size>0;
+}
+function recordingDownloadUrl(r){return `api/recordings/${encodeURIComponent(r.id)}/download`;}
 function scheduleDetectionRefresh(generation,filter){
  if(generation!==recordingQuery||page!=='recordings'||!clips.some(r=>r.detection?.state!=='complete'))return;
  recordingRefreshTimer=setTimeout(async()=>{
@@ -102,7 +111,7 @@ function scheduleDetectionRefresh(generation,filter){
      if(batch.length<1000)break;
     }
     clips.forEach((r,i)=>{if(updates.has(r.id)){r.detection=updates.get(r.id);const n=$(`[data-detection-index="${i}"]`);if(n)n.innerHTML=detectionIcons(r.detection);}});
-    updateDetectionCount();
+    updateDetectionCount();applyRecordingFilters();
    }
   }catch{/* Retry metadata only; never interrupt playback on a transient failure. */}
   scheduleDetectionRefresh(generation,filter);
@@ -125,19 +134,21 @@ async function loadRecordings(){
  try{
   for(let offset=0;;offset+=1000){const q=new URLSearchParams({camera:f.get('camera'),from:from.toISOString(),to:to.toISOString(),offset});const batch=await api('recording-range?'+q);if(generation!==recordingQuery||page!=='recordings')return;list.push(...batch);if(batch.length<1000)break;$('#recordingList').textContent=`กำลังค้นหา… ${list.length} ไฟล์`;}
   clips=Array.from(new Map(list.map(r=>[r.id,r])).values());clipRange={from:+from,to:+to};
-  $('#recordingList').innerHTML=clips.length?`<div class="actions recording-summary"><strong>${clips.length} ไฟล์</strong><button id="playAll" class="primary">▶ เล่นทั้งหมด</button><small id="detectionCount" class="muted" aria-live="polite"></small><small class="muted">Motion / Human · ✓ พบ · − ไม่พบ · ? รอตรวจ/ข้อมูลไม่ครบ</small></div><div class="recording-results">${clips.map((r,i)=>`<div class="recording-row"><div class="recording-stamp"><strong>${esc(new Date(r.start).toLocaleTimeString('th-TH',{hour12:false}))}</strong><small>${esc(new Date(r.start).toLocaleDateString('th-TH'))} · ${Math.round(r.duration)}s · ${(r.bytes/1048576).toFixed(1)} MB</small></div><div class="detection-icons" data-detection-index="${i}">${detectionIcons(r.detection)}</div><button data-play="${i}" aria-label="เล่นไฟล์ ${i+1}">▶ เล่น</button></div>`).join('')}</div>`:'<div class="empty-card"><h3>ไม่พบไฟล์ในช่วงเวลาที่เลือก</h3><p>ไฟล์จะแสดงหลังบันทึกแต่ละช่วงเสร็จ</p></div>';
+  $('#recordingList').innerHTML=clips.length?`<div class="actions recording-summary"><strong id="resultCount">${clips.length} ไฟล์</strong><label class="check"><input id="filterMotion" type="checkbox"> Motion</label><label class="check"><input id="filterHuman" type="checkbox"> Human</label><small class="muted">เลือกทั้งคู่ = พบอย่างใดอย่างหนึ่ง</small><button id="playAll" class="primary">▶ เล่นทั้งหมด</button><small id="detectionCount" class="muted" aria-live="polite"></small><small class="muted">Motion / Human · ✓ พบ · − ไม่พบ · ? รอตรวจ/ข้อมูลไม่ครบ</small></div><div class="recording-results">${clips.map((r,i)=>`<div class="recording-row" data-recording-index="${i}"><div class="recording-stamp"><strong>${esc(new Date(r.start).toLocaleTimeString('th-TH',{hour12:false}))}</strong><small>${esc(new Date(r.start).toLocaleDateString('th-TH'))} · ${Math.round(r.duration)}s · ${(r.bytes/1048576).toFixed(1)} MB</small></div><div class="detection-icons" data-detection-index="${i}">${detectionIcons(r.detection)}</div><button data-play="${i}" aria-label="เล่นไฟล์ ${i+1}">▶ เล่น</button><a class="recording-download" href="${recordingDownloadUrl(r)}" download title="ดาวน์โหลดไฟล์ ${i+1}" aria-label="ดาวน์โหลดไฟล์ ${i+1}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></a></div>`).join('')}</div><p id="noFilteredClips" class="muted" hidden>ไม่พบไฟล์ที่ตรงกับตัวกรอง</p>`:'<div class="empty-card"><h3>ไม่พบไฟล์ในช่วงเวลาที่เลือก</h3><p>ไฟล์จะแสดงหลังบันทึกแต่ละช่วงเสร็จ</p></div>';
   document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{$('#autoNext').checked=false;playClip(Number(b.dataset.play));});
-  if($('#playAll'))$('#playAll').onclick=()=>{$('#autoNext').checked=true;playClip(0);};
-  updateDetectionCount();scheduleDetectionRefresh(generation,{camera:f.get('camera'),from:from.toISOString(),to:to.toISOString()});
+  if($('#playAll'))$('#playAll').onclick=()=>{$('#autoNext').checked=true;playClip(filteredClipIndices()[0]);};
+  for(const id of ['#filterMotion','#filterHuman'])if($(id))$(id).onchange=applyRecordingFilters;
+  applyRecordingFilters();updateDetectionCount();scheduleDetectionRefresh(generation,{camera:f.get('camera'),from:from.toISOString(),to:to.toISOString()});
  }catch(e){if(generation===recordingQuery&&page==='recordings')$('#recordingList').textContent='ค้นหาไม่สำเร็จ: '+e.message;}
 }
 function playClip(index){
  clipIndex=index;const r=clips[index];if(!r)return;clipFinished=false;
+ $('#downloadClip').href=recordingDownloadUrl(r);
  $('#playTitle').textContent=r.cameraName;$('#playInfo').textContent=`ไฟล์ ${index+1}/${clips.length} · `+new Date(r.start).toLocaleString('th-TH');
  const video=$('#playVideo');video.onloadedmetadata=()=>{if(clips[clipIndex]?.id!==r.id)return;const offset=Math.max(0,(clipRange.from-new Date(r.start).getTime())/1000);if(offset>0&&offset<video.duration)video.currentTime=offset;video.play().catch(()=>{});};
  video.src=`api/recordings/${r.id}/video`;if(!$('#player').open)$('#player').showModal();video.play().catch(()=>{});
 }
-function adjacentClip(forward){const next=clipIndex+(forward?1:-1);if(next>=0&&next<clips.length)playClip(next);else{$('#playVideo').pause();toast(forward?'เล่นครบช่วงเวลาที่เลือกแล้ว':'ถึงไฟล์แรกแล้ว');}}
+function adjacentClip(forward){const indices=filteredClipIndices();const next=forward?indices.find(i=>i>clipIndex):indices.findLast(i=>i<clipIndex);if(next!==undefined)playClip(next);else{$('#playVideo').pause();toast(forward?'เล่นครบช่วงเวลาที่เลือกแล้ว':'ถึงไฟล์แรกแล้ว');}}
 function finishClip(){if(clipFinished)return;clipFinished=true;$('#playVideo').pause();if($('#autoNext').checked)adjacentClip(true);}
 $('#nextClip').onclick=()=>adjacentClip(true);$('#previousClip').onclick=()=>adjacentClip(false);
 $('#playVideo').onended=finishClip;

@@ -93,3 +93,5 @@
 สร้าง YYYY-MM-DD_HH-mm-ss_topic.md ใหม่ทุกงาน ไม่รวมเป็นไฟล์รายวัน เพิ่มลิงก์ในงานล่าสุด บันทึกคำขอ/การแก้ไข หลักฐาน deployment และสิ่งที่ยังไม่ยืนยัน การแก้ข้อมูลเก่าเป็น entry ใหม่อ้างไฟล์เดิม
 
 - [2026-09-28_19-14-56-camera-stream-options.md](2026-09-28_19-14-56-camera-stream-options.md) — camera main/substream options and current copy-stream clarification
+
+- [2026-09-28_21-57-51_recording-filters-download.md](2026-09-28_21-57-51_recording-filters-download.md) — Motion/Human result filters and recording downloads
