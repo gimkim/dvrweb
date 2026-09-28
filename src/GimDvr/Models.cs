@@ -49,7 +49,6 @@ public sealed record Recording(string Id, string CameraId, string CameraName, st
 {
     public DetectionResult? Detection { get; init; }
 }
-public sealed record DetectionResult(string State, bool? Motion = null, bool? Human = null, int Frames = 0, int HumanSamples = 0, double Confidence = 0, string? Device = null, string? Decoder = null, string? Error = null, string Version = "nas-person-v1");
 public sealed record ControlInput(string Action, int Value = 0);
 public sealed class Paths(IConfiguration config, IWebHostEnvironment env)
 {

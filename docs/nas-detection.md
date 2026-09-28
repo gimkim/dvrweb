@@ -10,7 +10,9 @@ FFmpeg tries D3D11VA hardware decode; a failed initialization/no frames falls ba
 
 SQLite `detections` stores recordingId, state, serialized independent nullable motion/human results, sampled frame/inference counts, maximum score, actual inference device/decoder, version, error code, attempts and update time. States: pending, processing, complete, partial, error. Positive evidence may survive incomplete coverage; negatives need a complete sampled clip and an available detector. A completed person-negative needs at least2 inference samples. The record is deleted with retention's recording row; results cannot be saved for a removed row. A shared disk lock protects against overlapping IIS/worker owners and crash recovery resets processing rows to pending.
 
-Authenticated recordings APIs include `detection`; neither paths nor camera credentials are added to responses. Shared web/Android UI shows SVG activity/person icons: green check=detected, grey dash=not detected in samples, amber question mark=pending/unavailable/incomplete. Accessible titles distinguish pending, processing, partial and failed. Search results use compact rows and show a legend. Search again to load updated background results. No APK update is required for installed1.0.1.
+Authenticated recordings APIs include `detection`; neither paths nor camera credentials are added to responses. Shared web/Android UI shows SVG activity/person icons: green check=detected, grey dash=not detected in samples, amber question mark=pending/unavailable/incomplete. Accessible titles distinguish pending, processing, partial and failed. Search results use compact rows and refresh unfinished detection badges/count every10seconds without restarting playback. No APK update is required for installed1.0.1.
+
+Version1.9.0 optionally uses [remote MotionService](motion-service.md): authenticated HTTPS polling every15seconds, upload completed files when ready, same-job local fallback on remote failure. This page describes the NAS fallback algorithm; remote uses YOLOX-tiny CUDA/CPU and an explicit different result version. SQLite and queue ownership stay on NAS.
 
 ## Runtime and deployment
 

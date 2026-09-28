@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import time
+import contextlib
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 import cv2
@@ -113,13 +114,15 @@ class Summary:
                     human=True if self.human else False if human_complete else None,
                     frames=self.frames, humanSamples=self.samples, confidence=round(self.confidence, 4),
                     device=self.person.device, decoder=decoder,
-                    error=self.human_error or (None if complete else "decode_incomplete"), version="nas-person-v1")
+                    error=self.human_error or (None if complete else "decode_incomplete"), version=getattr(self.person, "version", "nas-person-v1"))
 
 
-def decode(ffmpeg, path, duration, person, hardware):
-    args = [ffmpeg, "-hide_banner", "-loglevel", "error", "-xerror", "-nostdin", "-threads", "1", "-filter_threads", "1", "-readrate", "4"]
+def decode(ffmpeg, path, duration, person, hardware, decoder="d3d11va", readrate=4):
+    args = [ffmpeg, "-hide_banner", "-loglevel", "error", "-xerror", "-nostdin", "-threads", "1", "-filter_threads", "1"]
+    if readrate > 0:
+        args += ["-readrate", str(readrate)]
     if hardware:
-        args += ["-hwaccel", "d3d11va"]
+        args += ["-hwaccel", decoder]
     args += ["-i", path, "-t", str(min(duration + 1, 180)), "-map", "0:v:0", "-an", "-sn", "-dn",
              "-vf", f"fps={FPS},scale={WIDTH}:{HEIGHT}:flags=fast_bilinear", "-pix_fmt", "bgr24", "-threads", "1", "-f", "rawvideo", "pipe:1"]
     flags = subprocess.CREATE_NO_WINDOW | subprocess.BELOW_NORMAL_PRIORITY_CLASS if os.name == "nt" else 0
@@ -133,7 +136,7 @@ def decode(ffmpeg, path, duration, person, hardware):
                 break
             summary.update(np.frombuffer(data, dtype=np.uint8).reshape(HEIGHT, WIDTH, 3))
         code = process.wait(timeout=15)
-        return summary.result(duration, "d3d11va" if hardware else "cpu-1thread", code == 0)
+        return summary.result(duration, decoder if hardware else "cpu-1thread", code == 0)
     finally:
         if process.poll() is None:
             process.kill()
@@ -146,19 +149,38 @@ def main():
     parser.add_argument("--model", required=True)
     parser.add_argument("--ffmpeg", required=True)
     parser.add_argument("--device", default="GPU")
+    parser.add_argument("--backend", choices=["openvino", "onnx"], default="openvino")
+    parser.add_argument("--decoder", choices=["d3d11va", "cuda", "cpu"], default="d3d11va")
+    parser.add_argument("--readrate", type=float, default=4)
     options = parser.parse_args()
-    person = Person(options.model, options.device)
-    hardware = os.name == "nt"
+    with contextlib.redirect_stdout(sys.stderr):
+        if options.backend == "onnx":
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from onnx_person import OnnxPerson
+            person = OnnxPerson(options.model, options.device)
+        else:
+            person = Person(options.model, options.device)
+    hardware = os.name == "nt" and options.decoder != "cpu"
     for line in sys.stdin:
         try:
             request = json.loads(line)
+            if request.get("kind") == "health":
+                if person.compiled is not None and not person.error:
+                    with contextlib.redirect_stdout(sys.stderr):
+                        person.score(np.zeros((HEIGHT, WIDTH, 3), np.uint8))
+                print(json.dumps(dict(ready=person.compiled is not None and not person.error, device=person.device)), flush=True)
+                continue
             duration = float(request["duration"])
-            if not 0 < duration <= 180 or not os.path.isfile(request["path"]):
-                raise ValueError("invalid clip")
-            result = decode(options.ffmpeg, request["path"], duration, person, hardware)
+            if not 0 < duration <= 180:
+                print(json.dumps(dict(state="error", error="invalid_duration")), flush=True)
+                continue
+            if not os.path.isfile(request["path"]):
+                print(json.dumps(dict(state="error", error="file_unavailable")), flush=True)
+                continue
+            result = decode(options.ffmpeg, request["path"], duration, person, hardware, options.decoder, options.readrate)
             if hardware and result["frames"] == 0:
                 hardware = False  # Do not repeatedly initialize a broken device for every clip.
-                result = decode(options.ffmpeg, request["path"], duration, person, False)
+                result = decode(options.ffmpeg, request["path"], duration, person, False, options.decoder, options.readrate)
         except Exception:
             result = dict(state="error", error="analysis_failed")
         print(json.dumps(result, allow_nan=False), flush=True)

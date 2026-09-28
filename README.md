@@ -1,5 +1,7 @@
 # GimDVR
 
+Remote analysis1.9.0: [MotionService setup and operation](docs/motion-service.md). NAS polls the authenticated HTTPS service every15seconds, prefers NVIDIA CUDA/CPU remote processing when ready, and falls back to NAS OpenVINO on failure. Recording, retention and SQLite stay on NAS.
+
 อ่าน [Agent notes](AGENT_NOTES.md) สำหรับ concept/หลักการปัจจุบัน และ [Worklog index](worklog/README.md) สำหรับประวัติแยกแต่ละงาน ข้อความรุ่นเก่าด้านล่างเป็นประวัติและอาจถูกแทนที่ด้วยการตัดสินใจล่าสุด
 
 .NET 10 / ASP.NET Core application for a Windows NAS, hosted as `/gimdvr` under the existing HTTPS IIS site.

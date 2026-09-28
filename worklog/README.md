@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_20-38-06_remote-motion-service.md](2026-09-28_20-38-06_remote-motion-service.md) — CUDA/CPU MotionService, NAS remote polling/fallback; IIS UAC activation pending
+
 - [2026-09-28_20-34-45_detection-log-recheck.md](2026-09-28_20-34-45_detection-log-recheck.md) — worker continuing, recent aggregate3.61x, six exhausted historical errors
 
 - [2026-09-28_20-25-29_detection-results-refresh.md](2026-09-28_20-25-29_detection-results-refresh.md) — worker still progressing; refresh web/Android detection results without interrupting playback

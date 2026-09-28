@@ -11,6 +11,7 @@ builder.Services.AddSingleton<Paths>();
 builder.Services.AddSingleton<AssetVersions>();
 builder.Services.AddHttpsRedirection(o=>o.HttpsPort=443);
 var paths=new Paths(builder.Configuration,builder.Environment);
+builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"detection-remote.json"),optional:true,reloadOnChange:false);
 if(OperatingSystem.IsWindows())Console.WriteLine($"GimDVR running as {System.Security.Principal.WindowsIdentity.GetCurrent().Name}; pool={Environment.GetEnvironmentVariable("APP_POOL_ID")??"standalone"}");
 Directory.CreateDirectory(paths.Data);
 builder.Services.AddDataProtection().SetApplicationName("GimDvr").PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Data,"keys")));
@@ -91,7 +92,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.8.1"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.9.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
