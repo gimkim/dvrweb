@@ -103,3 +103,5 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว็บ ตั้งWebView CacheMode.NoCacheโดยไม่ล้างCookie/DOMstorage;100msfragments/200msbuffer/สลับlayoutไม่reconnectมาจากเว็บ ไม่มีnativeencoderเพิ่ม ([worklog](worklog/2026-09-28_18-51-04_android-shared-web-stream.md)).
 
 เว็บมีลิงก์ดาวน์โหลดAPK1.0.1บนหน้าloginและheaderหลังlogin;ซ่อนลิงก์ในAndroidshell ต้องอัปเดตปลายทางเมื่อออกAPKใหม่ ([worklog](worklog/2026-09-28_18-54-37_web-apk-download-link.md)).
+
+ปุ่มเปิด/ปิดการดูใช้inlineSVGแทนUnicode power glyph เพื่อไม่ขึ้นmissing-glyphบนมือถือ คงrole=switch/aria-checkedและlabelเดิม ([worklog](worklog/2026-09-28_18-56-18_mobile-power-icon-svg.md)).
