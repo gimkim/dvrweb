@@ -137,3 +137,5 @@ Recording results filter by positive Motion/Human evidence; both selected means 
 Live status now renders only live when playing; buffering/waiting is blank. Shared web/Android UI; internal buffering behavior unchanged. [worklog](worklog/2026-09-28_21-59-28_live-only-status.md).
 
 Recordings search reveals time inputs/actions and time hint only after a camera is selected; initially show camera selection alone. Shared web/Android UI. [worklog](worklog/2026-09-28_22-03-05_progressive-recording-search.md).
+
+Copy player must pause on waiting to accumulate rebuffer reserve; native auto-resume otherwise defeats configured buffer. Startup retains max(startup,target); resume max(rebuffer,target), steady catchup preserves max of all three. Emit live on playing only; do not seek/restart per fragment. Follow playhead range; throttle history eviction to5s with30s retained. Code simulation is not real playback proof. [worklog](worklog/2026-09-28_22-26-11_live-rebuffer-reserve-fix.md).

@@ -99,3 +99,5 @@
 - [2026-09-28_21-59-28_live-only-status.md](2026-09-28_21-59-28_live-only-status.md) — show only live status
 
 - [2026-09-28_22-03-05_progressive-recording-search.md](2026-09-28_22-03-05_progressive-recording-search.md) — progressive camera then time selection
+
+- [2026-09-28_22-26-11_live-rebuffer-reserve-fix.md](2026-09-28_22-26-11_live-rebuffer-reserve-fix.md) — enforce actual rebuffer reserves and preserve continuous playback
