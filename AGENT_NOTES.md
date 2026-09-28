@@ -147,3 +147,5 @@ Copy player must pause on waiting to accumulate rebuffer reserve; native auto-re
 Current allowlist also uses external Dvr:WebRtcClockFps=15 to regularize only WebRTC packet timestamps (setts bitstream filter, video copy).0/default disables. Re-measure when camera FPS changes. Arrival timestamps alone retain camera packet-burst jitter.
 
 1.10.2: fMP4 fallback uses the same optional live frame clock as WebRTC for verified allowlisted cameras. Historical WebRtcClockFps key now governs both live outputs; default0 disables. Chain setts after extract_extradata; keep recording timestamps and admin buffers unchanged.21stream/6player code checks; no browser test. [worklog](worklog/2026-09-28_23-28-40_fmp4-fallback-clock.md).
+
+Live snapshot button captures current video frame client-side as native-resolution JPEG; no camera snapshot endpoint or playback interruption. Shared overview/single wrapper, SVG icon. Web code-tested; native Android download unsupported/unverified. [worklog](worklog/2026-09-29_01-03-05_live-snapshot-button.md).

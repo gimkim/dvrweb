@@ -57,3 +57,5 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 .recording-row[hidden]{display:none}.recording-download{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;padding:6px 10px;border:1px solid var(--border,#34464d);border-radius:8px;text-decoration:none;flex-shrink:0;box-sizing:border-box}.recording-download svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.recording-summary .check{display:inline-flex;align-items:center;gap:5px}.recording-summary .check input{width:auto}
 
 #recordingTimes[hidden],#recordingTimeHint[hidden],#recordingList[hidden]{display:none}
+
+.live-snapshot{position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;padding:9px;background:#10191ee8;border-color:#687981;display:grid;place-items:center}.live-snapshot:focus-visible{outline:2px solid var(--mint);outline-offset:2px}.camera-card[data-viewing=false] .live-snapshot{display:none}
