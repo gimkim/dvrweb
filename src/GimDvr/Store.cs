@@ -19,6 +19,8 @@ public sealed partial class Store
         using var cmd = db.CreateCommand();
         cmd.CommandText = """
         PRAGMA journal_mode=WAL;
+        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,json TEXT NOT NULL);
+        INSERT OR IGNORE INTO settings VALUES('live-stream','{"SegmentMs":150,"StartupMs":300,"RebufferMs":300,"LiveTargetMs":300}');
         CREATE TABLE IF NOT EXISTS cameras(id TEXT PRIMARY KEY,json TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT UNIQUE COLLATE NOCASE,hash TEXT,role TEXT,enabled INTEGER,stamp TEXT);
         CREATE TABLE IF NOT EXISTS recordings(id TEXT PRIMARY KEY,cameraId TEXT,cameraName TEXT,path TEXT UNIQUE,start TEXT,duration REAL,bytes INTEGER);

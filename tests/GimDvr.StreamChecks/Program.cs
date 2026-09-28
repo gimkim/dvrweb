@@ -20,7 +20,7 @@ await Run("-hide_banner","-loglevel","error","-f","lavfi","-i","testsrc2=size=32
 var raw=await Run(new[]{"-hide_banner","-loglevel","error","-i",source}.Concat(FragmentCache.Arguments()).ToArray());
 await File.WriteAllBytesAsync(Path.Combine(root,"raw.mp4"),raw);
 var boxes=new List<(string Type,int Offset,int Size)>();for(int pos=0;pos<raw.Length;){int size=(int)BinaryPrimitives.ReadUInt32BigEndian(raw.AsSpan(pos,4));boxes.Add((Encoding.ASCII.GetString(raw,pos+4,4),pos,size));pos+=size;}
-var mdats=boxes.Where(b=>b.Type=="mdat").ToArray();Console.WriteLine($"Fragment count: {mdats.Length}");Check(mdats.Length>=95,"10-second video with four-second GOP yields about 100 short fragments");
+var mdats=boxes.Where(b=>b.Type=="mdat").ToArray();Console.WriteLine($"Fragment count: {mdats.Length}");Check(mdats.Length>=60,"10-second video with four-second GOP yields about 60–70 short fragments at 150ms");
 var cut=mdats[1].Offset+mdats[1].Size;var cache=Path.Combine(root,"cache");
 using var gated=new GatedStream(raw,cut);var pumping=FragmentCache.Pump(gated,cache);
 for(int i=0;i<250&&(FragmentCache.ReadIndex(cache)?.Fragments.Length??0)<2;i++)await Task.Delay(20);
@@ -45,7 +45,7 @@ var muxHls=Path.Combine(root,"mux-hls");var muxRecord=Path.Combine(root,"mux-rec
 var simultaneous=await Run(new[]{"-hide_banner","-loglevel","error","-i",source}.Concat(MediaService.OverviewArguments(muxHls)).Concat(FragmentCache.Arguments()).Concat(MediaService.RecordingArguments(Path.Combine(root,"mux.csv"),muxRecord)).ToArray());
 await FragmentCache.Pump(new MemoryStream(simultaneous),Path.Combine(root,"mux-copy"));
 var recorded=Directory.GetFiles(muxRecord,"*.mp4").Single();var recordHashes=Hashes(await Run("-v","error","-i",recorded,"-map","0:v:0","-f","framemd5","-"));
-Check(File.Exists(Path.Combine(muxHls,"index.m3u8"))&&FragmentCache.ReadIndex(Path.Combine(root,"mux-copy"))!.Fragments.Length>=95&&recordHashes.SequenceEqual(original),"one FFmpeg input simultaneously preserves recording, snapshot HLS and short copy fragments");
+Check(File.Exists(Path.Combine(muxHls,"index.m3u8"))&&FragmentCache.ReadIndex(Path.Combine(root,"mux-copy"))!.Fragments.Length>=60&&recordHashes.SequenceEqual(original),"one FFmpeg input simultaneously preserves recording, snapshot HLS and short copy fragments");
 // Publish through the real HTTP handler with isolated store/runtime fixtures (no listening server).
 var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DataRoot"]=Path.Combine(root,"data"),["Dvr:MediaOwner"]="worker"}).Build();
 var paths=new Paths(config,new Env(root));var store=new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys"))));

@@ -1,6 +1,8 @@
 # GimDVR — Agent notes
 
-ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.8.0 (copy-only fMP4 ทุกโหมด, 100ms fragments / 200ms buffer)
+ปรับปรุง: 2026-09-28 (Asia/Bangkok) —1.9.1: copy-only fMP4 ทุกโหมด, ค่าเริ่มต้น150ms fragments /300ms startup,rebuffer,live target ปรับโดยadminและเก็บSQLite
+
+Admin adjusts four millisecond settings in ระบบและกิจกรรม → ภาพสด · Buffer. Buffer changes reconnect viewers; fragment-duration changes restart shared camera readers and can briefly interrupt recording. Values are global for web/Android and persist across restarts. Existing100/200ms statements below are historical, superseded by [1.9.1 settings](worklog/2026-09-28_21-50-50_admin-stream-buffer-settings.md).
 
 เอกสารนี้สรุป concept และหลักการปัจจุบัน ต้องอ่านคู่กับ [AGENTS.md](AGENTS.md) และ [ดัชนี worklog](worklog/README.md) รายละเอียดการทดลองเก่าไม่ใช่ข้อกำหนดปัจจุบัน เมื่อผู้ใช้เปลี่ยนแนวทางให้แก้สรุปนี้และสร้าง worklog ไฟล์ใหม่
 

@@ -10,6 +10,8 @@ public sealed partial class MediaService
     }
     public async Task CopyStream(Camera camera,HttpContext ctx)
     {
+        var settings=store.StreamSettings();
+        ctx.Response.Headers["X-Startup-Ms"]=settings.StartupMs.ToString();ctx.Response.Headers["X-Rebuffer-Ms"]=settings.RebufferMs.ToString();ctx.Response.Headers["X-Live-Target-Ms"]=settings.LiveTargetMs.ToString();
         var ct=ctx.RequestAborted;var deadline=DateTimeOffset.UtcNow.AddSeconds(25);var nextAuth=DateTimeOffset.MinValue;
         string? folder=null;long observed=0,next=0;bool started=false,observedIndex=false;
         ctx.Response.ContentType="application/x-gimdvr-fmp4";ctx.Response.Headers.CacheControl="no-store, no-transform";
@@ -18,6 +20,7 @@ public sealed partial class MediaService
             while(!ct.IsCancellationRequested){
                 var now=DateTimeOffset.UtcNow;
                 if(now>=nextAuth){
+                    if(store.StreamSettings()!=settings)throw new IOException("Live settings changed");
                     var user=store.Users().Find(u=>u.Id==ctx.User.FindFirstValue(ClaimTypes.NameIdentifier));
                     if(user is null||!user.Enabled||user.Stamp!=ctx.User.FindFirstValue("stamp")||!store.Camera(camera.Id).Enabled){ctx.Abort();return;}
                     Watch(camera.Id);nextAuth=now.AddSeconds(2);

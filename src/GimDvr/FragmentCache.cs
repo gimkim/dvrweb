@@ -10,7 +10,7 @@ public static class FragmentCache
     public sealed record Entry(long Sequence,bool Keyframe,int Bytes);
     public sealed record Index(Entry[] Fragments);
     public static string Chunk(string root,long seq)=>Path.Combine(root,$"chunk{seq:D12}.m4s");
-    public static string[] Arguments()=>["-map","0:v:0","-c:v","copy","-bsf:v","extract_extradata","-an","-f","mp4","-movflags","empty_moov+delay_moov+default_base_moof+frag_keyframe","-frag_duration","100000","-flush_packets","1","pipe:1"];
+    public static string[] Arguments(int segmentMs=150)=>["-map","0:v:0","-c:v","copy","-bsf:v","extract_extradata","-an","-f","mp4","-movflags","empty_moov+delay_moov+default_base_moof+frag_keyframe","-frag_duration",(segmentMs*1000).ToString(System.Globalization.CultureInfo.InvariantCulture),"-flush_packets","1","pipe:1"];
     static uint U32(byte[] data,int offset)=>BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset,4));
     static IEnumerable<(string Type,int Body,int End)> Boxes(byte[] data,int start,int end)
     {

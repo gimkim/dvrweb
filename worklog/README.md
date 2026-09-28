@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_21-50-50_admin-stream-buffer-settings.md](2026-09-28_21-50-50_admin-stream-buffer-settings.md) —150ms fragments/300ms buffers, persisted admin settings across web/Android
+
 - [2026-09-28_21-41-00_motion-service-activation-check.md](2026-09-28_21-41-00_motion-service-activation-check.md) — IIS activation and actual NAS-to-CUDA completed jobs confirmed
 
 - [2026-09-28_20-38-06_remote-motion-service.md](2026-09-28_20-38-06_remote-motion-service.md) — CUDA/CPU MotionService, NAS remote polling/fallback; IIS UAC activation pending

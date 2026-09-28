@@ -148,6 +148,13 @@ store.AddRecording(unknown);
 Check(store.WithDetection([unknown]).Single().Detection?.State=="pending","retention removes detection result with recording");
 store.SaveDetection("not-catalogued",new("complete",true,true));
 Check(store.WithDetection([unknown with{Id="not-catalogued"}]).Single().Detection?.State=="pending","cannot create orphan detection for deleted recording");
+Check(store.StreamSettings()==new LiveStreamSettings(150,300,300,300),"live settings default to150ms fragments and300ms reserves");
+store.SaveStreamSettings(new(100,250,350,450));
+Check(new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys")))).StreamSettings()==new LiveStreamSettings(100,250,350,450),"live settings persist and are shared across store instances");
+foreach(var bad in new[]{new LiveStreamSettings(0,300,300,300),new LiveStreamSettings(150,150,300,300),new LiveStreamSettings(150,300,6000,300)})
+{try{store.SaveStreamSettings(bad);throw new Exception("Invalid settings accepted");}catch(ArgumentException){}}
+Check(store.StreamSettings()==new LiveStreamSettings(100,250,350,450),"invalid settings cannot replace saved values");
+Check(FragmentCache.Arguments(150).Contains("150000")&&FragmentCache.Arguments(250).Contains("250000"),"fragment duration converts configured milliseconds to FFmpeg microseconds");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {

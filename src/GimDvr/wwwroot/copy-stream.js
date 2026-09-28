@@ -36,6 +36,8 @@ function startCopyStream(video,id,onStatus){
     watchdog=setInterval(()=>{if(Date.now()-lastData>(started?10000:30000))controller.abort();},1000);
     const response=await fetch(`api/cameras/${encodeURIComponent(id)}/copy-stream`,{signal:controller.signal,cache:'no-store'});
     if(!response.ok)throw Error(`Stream HTTP ${response.status}`);
+    const setting=(name)=>{const value=Number(response.headers.get(name));return Number.isFinite(value)&&value>=50&&value<=5000?value/1000:0.3;};
+    const startup=setting("X-Startup-Ms"),resume=setting("X-Rebuffer-Ms"),target=setting("X-Live-Target-Ms");
     reader=response.body.getReader();const packets=new CopyPacketReader(reader),init=await packets.next();lastData=Date.now();
     const mime=`video/mp4; codecs="${copyVideoCodec(init)}"`;if(!MediaSource.isTypeSupported(mime))throw Error('เบราว์เซอร์ไม่รองรับรูปแบบภาพของกล้อง');
     buffer=source.addSourceBuffer(mime);
@@ -48,11 +50,11 @@ function startCopyStream(video,id,onStatus){
      const data=await packets.next();lastData=Date.now();await update(()=>buffer.appendBuffer(data));
      if(!buffer.buffered.length)continue;
      const start=buffer.buffered.start(buffer.buffered.length-1),end=buffer.buffered.end(buffer.buffered.length-1);
-     if(!started){if(end-start<0.2)continue;video.currentTime=Math.max(start,end-0.2);started=true;}
+     if(!started){if(end-start<startup)continue;video.currentTime=Math.max(start,end-target);started=true;}
      const lag=end-video.currentTime;
-     if(video.currentTime<start||lag>2){video.currentTime=Math.max(start,end-0.2);rebuffer=false;}
-     if(rebuffer&&end-video.currentTime<0.2)continue;
-     rebuffer=false;video.playbackRate=end-video.currentTime>0.9?1.05:1;
+     if(video.currentTime<start||lag>Math.max(2,target+1.7)){video.currentTime=Math.max(start,end-target);rebuffer=false;}
+     if(rebuffer&&end-video.currentTime<resume)continue;
+     rebuffer=false;video.playbackRate=end-video.currentTime>Math.max(0.9,target+0.6)?1.05:1;
      if(video.paused)video.play().catch(()=>{});
      onStatus('live');
      if(video.currentTime>4&&buffer.buffered.start(0)<video.currentTime-4)await update(()=>buffer.remove(0,video.currentTime-3));
