@@ -90,10 +90,12 @@ Build a signed update with `deployment/Build-Android.ps1`. Requires .NET 10 Andr
 Run web lifecycle checks with `node tests/live-session-checks.cjs` and backend checks with `dotnet run --project tests/GimDvr.Checks -c Release`.
 
 
-## Viewing modes (1.5.0)
+## Viewing modes (1.6.0)
 
-Overview proxies the original camera video through HLS remuxing (`-c:v copy`), with no video transcoding, audio or per-camera control/settings/fullscreen buttons. The existing viewing switch is retained. Click a camera name to open its full-tab single-camera view, with a draggable PTZ panel (operator/admin), sound and fullscreen.
+Overview proxies the original camera video through continuous short-fMP4 remuxing (`-c:v copy`), with no video transcoding, audio or per-camera control/settings/fullscreen buttons. The existing viewing switch is retained. Click a camera name to open its full-tab single-camera view, with a draggable PTZ panel (operator/admin), sound and fullscreen.
 
 Only single-camera focus starts a shared Quick Sync encoder for that camera. Focus uses approximately 0.533-second segments and a 0.7-second player live target; actual end-to-end delay is not guaranteed. Returning to overview stops focus demand and the encoder exits after its idle grace while recording continues. Multiple users viewing the same focused camera share its encoder; users may focus different cameras independently. Video recording remains stream-copy. The existing Android APK loads the updated UI from the fixed server; no reinstall is needed for this change.
 
-Overview latency tuning: the player now targets one source segment behind the published edge instead of two, allows1.1x catch-up and disables automatic target growth after stalls. Existing NAS playlists had4-second segments, so this reduces the configured target from8 to4seconds. Actual camera-to-screen delay also includes segment publication and transport; no subsecond guarantee. This static update requires a normal reload/reopening the app. Only code smoke/functional tests were run for this patch.
+Overview sends approximately 200ms fMP4 fragments from the existing camera reader. New viewers wait for the next keyframe, then receive dependent frames continuously without waiting for a complete GOP. One bounded shared cache (128 fragments / 64MiB per camera) serves all viewers. The MediaSource player targets about0.5seconds behind received media; camera buffering, network/proxy buffering and decoding still affect actual latency. H.264/MediaSource support is required. The HLS copy output remains for snapshots; focus QSV and recordings are unchanged.
+
+Local functional checks: `dotnet run --project tests/GimDvr.StreamChecks -c Release`, then `node tests/copy-stream-checks.cjs`. Synthetic10-second video with4-second keyframes yields50fragments, including dependent frames, with matching decoded frame hashes and valid joining at the next keyframe. These are code tests; real browser/device latency remains unverified. Reload normally or reopen the existing Android app to load the content-versioned assets.

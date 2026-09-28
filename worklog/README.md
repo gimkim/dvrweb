@@ -4,6 +4,10 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-28-23_continuous-copy-fmp4.md](2026-09-28_18-28-23_continuous-copy-fmp4.md) — continuous copy-only fMP4 overview 1.6.0; local functional tests and NAS file deployment
+
+- [2026-09-28_18-12-29_keyframe-start-latency-design.md](2026-09-28_18-12-29_keyframe-start-latency-design.md) — keyframe startup versus steady latency; explanation only
+
 - [2026-09-28_18-11-23_reduce-overview-player-delay.md](2026-09-28_18-11-23_reduce-overview-player-delay.md) — reduce copy-only overview target delay; code tests only
 
 - [2026-09-28_18-05-36_code-tests-only-policy.md](2026-09-28_18-05-36_code-tests-only-policy.md) — user policy: code smoke/functional tests only

@@ -8,6 +8,7 @@ class FakeHls {
  constructor(options){this.options=options;this.destroyed=false;encoders.push(this);}loadSource(src){this.src=src;}attachMedia(v){this.video=v;}on(){}destroy(){this.destroyed=true;}
 }
 const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{addEventListener(){},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:()=>new Promise((resolve,reject)=>pending.push({resolve,reject})),isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
+context.startCopyStream=(video,id)=>{const player=new FakeHls({copy:true});player.attachMedia(video);player.src='api/cameras/'+id+'/copy-stream';return player;};
 vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=liveSessions;',context);
 (async()=>{
  const old=context.connectLive({id:'a'});context.sessions.get('a').destroy();pending.shift().resolve();await old;
@@ -15,8 +16,7 @@ vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=li
  const failed=context.connectLive({id:'a'});context.sessions.get('a').destroy();pending.shift().reject(Error('late'));await failed;
  console.log('PASS late failed request after stop is ignored');
  for(const camera of ['a','b','c']){const p=context.connectLive({id:camera});pending.shift().resolve();await p;}
- const overview=encoders[0].options;assert.equal(overview.liveSyncDurationCount,1);assert.equal(overview.liveMaxLatencyDurationCount,2);assert.equal(overview.liveSyncOnStallIncrease,0);assert.equal(overview.maxBufferLength,4);assert.equal(overview.maxLiveSyncPlaybackRate,1.1);assert.equal(overview.liveSyncDurationCount*4,4);
- console.log('PASS four-second source segments target four seconds instead of eight, with bounded catch-up and no stall latency growth');
+ assert.equal(encoders[0].options.copy,true);assert.equal(encoders[0].src,'api/cameras/a/copy-stream');console.log('PASS overview selects continuous copy transport instead of HLS');
  assert.equal(intervals.size,3);context.sessions.get('b').destroy();assert.equal(intervals.size,2);assert.equal(encoders[1].destroyed,true);assert.equal(encoders[0].destroyed,false);assert.equal(encoders[2].destroyed,false);
  console.log('PASS stopping one camera leaves other two players and heartbeats alive');
  const replacement=context.connectLive({id:'a'});assert.equal(encoders[0].destroyed,true);pending.shift().resolve();await replacement;assert.equal(intervals.size,2);

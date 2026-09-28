@@ -90,7 +90,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.5.0"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.6.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -139,6 +139,11 @@ app.MapGet("/api/cameras/{id}/talk-capability",(string id,Store s)=>
     var camera=s.Camera(id);
     return Results.Ok(new{supported=false,reason=camera.Driver=="vstarcam"?"ยังส่งเสียงออกลำโพงผ่านเว็บไม่ได้: กล้องชุดนี้ไม่ประกาศ RTSP audio backchannel และต้องใช้โปรโตคอลเสียงเฉพาะ VStarcam":"ยังไม่มีไดรเวอร์ส่งเสียงย้อนกลับสำหรับกล้องนี้"});
 }).RequireAuthorization("control");
+app.MapGet("/api/cameras/{id}/copy-stream",async(string id,Store s,MediaService media,HttpContext ctx)=>
+{
+    var camera=s.Camera(id);if(!camera.Enabled){ctx.Response.StatusCode=404;return;}
+    await media.CopyStream(camera,ctx);
+}).RequireAuthorization();
 app.MapGet("/api/live/{id}/{name}",(string id,string name,Store s,MediaService media,HttpContext ctx)=>
 {
     ctx.Response.Headers.CacheControl="no-store";

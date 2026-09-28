@@ -20,7 +20,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     sealed record Manifest(string CameraId,string CameraName,string Root,string Csv,string Session);
     sealed class Run(Camera camera,Process process,string live,Manifest? manifest,IDisposable? job)
     {
-        public string Overview=live; public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
+        public Task? FragmentPump; public string Overview=live; public Camera Camera=camera;public Process Process=process;public string Live=live;public Manifest? Manifest=manifest;public IDisposable? Job=job; public Process? Encoder; public IDisposable? EncoderJob; public int RelayPort; public bool QsvFailed; public string EncoderName="none"; public DateTimeOffset EncoderStarted;
     }
     sealed record SharedState(DateTimeOffset Updated,bool Running,bool Recording,string? Live,int? ProcessId,string? Error,int? EncoderProcessId=null,string? Encoder=null,string? Overview=null);
     public void Watch(string id,bool focus=false)
@@ -121,13 +121,14 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
     {
         var session=DateTime.UtcNow.ToString("yyyyMMddTHHmmss")+"-"+Guid.NewGuid().ToString("N")[..8];
         var live=Path.Combine(paths.Live,c.Id,session);Directory.CreateDirectory(live);
-        var info=new ProcessStartInfo(paths.Ffmpeg){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardInput=true};
+        var info=new ProcessStartInfo(paths.Ffmpeg){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true,RedirectStandardInput=true,RedirectStandardOutput=true};
         void Add(params string[] a){foreach(var v in a)info.ArgumentList.Add(v);}
         Add("-hide_banner","-loglevel","error","-nostats","-fflags","+genpts","-rtsp_transport","tcp","-timeout","10000000","-i",cameras.Rtsp(c));
         using var socket=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,0));
         var relayPort=((System.Net.IPEndPoint)socket.Client.LocalEndPoint!).Port;socket.Close();
         Add("-map","0:v:0","-map","0:a:0?","-c:v","copy","-c:a","aac","-ar","16000","-ac","1","-b:a","48k","-f","mpegts","-mpegts_flags","resend_headers","-muxdelay","0","-flush_packets","1",$"udp://127.0.0.1:{relayPort}?pkt_size=1316");
         Add(OverviewArguments(live));
+        Add(FragmentCache.Arguments());
         Manifest? manifest=null;
         if(c.RecordingEnabled)
         {
@@ -144,7 +145,8 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         process.ErrorDataReceived+=(_,e)=>{if(!string.IsNullOrWhiteSpace(e.Data)){errors[c.Id]="สตรีมมีข้อผิดพลาด กำลังลองเชื่อมต่อใหม่ ตรวจกล้องหรือพื้นที่บันทึกหากยังไม่กลับมา";log.LogWarning("Camera {Id}: {Error}",c.Id,Sanitize(e.Data,c));}};
         if(!process.Start())throw new InvalidOperationException("เริ่ม FFmpeg ไม่สำเร็จ");
         IDisposable? job=null;
-        try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();runs[c.Id]=new(c,process,live,manifest,job){RelayPort=relayPort};errors.TryRemove(c.Id,out _);}
+        try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();var run=new Run(c,process,live,manifest,job){RelayPort=relayPort};runs[c.Id]=run;
+            run.FragmentPump=Task.Run(async()=>{try{await FragmentCache.Pump(process.StandardOutput.BaseStream,Path.Combine(live,"fragments"));}catch(Exception e){log.LogWarning("Copy fragment cache {Id}: {Error}",c.Id,Sanitize(e.Message,c));try{await process.StandardOutput.BaseStream.CopyToAsync(Stream.Null);}catch(IOException){}}});errors.TryRemove(c.Id,out _);}
         catch{process.Kill(true);process.Dispose();job?.Dispose();throw;}
     }
     // Overview is a video-only remux: no decoder, scaling or video encoder.
@@ -172,7 +174,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
             }
         }
         catch(InvalidOperationException){}
-        finally{run.Job?.Dispose();run.Process.Dispose();}
+        finally{if(run.FragmentPump is not null)try{await run.FragmentPump;}catch(IOException){}run.Job?.Dispose();run.Process.Dispose();}
     }
     void IndexCompleted()
     {
