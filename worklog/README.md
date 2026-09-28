@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_19-47-25_nas-detection-feasibility.md](2026-09-28_19-47-25_nas-detection-feasibility.md) — low-load NAS motion/person detection design and limits
+
 - [2026-09-28_19-20-49_eye4-reverse-engineering.md](2026-09-28_19-20-49_eye4-reverse-engineering.md) — Eye4 static protocol research, local/cloud/SD alarm sources
 
 - [2026-09-28_19-10-18_mobile-recordings-detection-review.md](2026-09-28_19-10-18_mobile-recordings-detection-review.md) — mobile recordings navigation/layout; vendor event capability review
