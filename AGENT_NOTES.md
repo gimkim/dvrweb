@@ -1,6 +1,6 @@
 # GimDVR — Agent notes
 
-ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.6.1 (overview copy / single-camera QSV)
+ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.7.0 (copy-only fMP4 ทุกโหมด, 100ms fragments / 200ms buffer)
 
 เอกสารนี้สรุป concept และหลักการปัจจุบัน ต้องอ่านคู่กับ [AGENTS.md](AGENTS.md) และ [ดัชนี worklog](worklog/README.md) รายละเอียดการทดลองเก่าไม่ใช่ข้อกำหนดปัจจุบัน เมื่อผู้ใช้เปลี่ยนแนวทางให้แก้สรุปนี้และสร้าง worklog ไฟล์ใหม่
 
@@ -11,26 +11,26 @@
 - จัดการผู้ใช้ admin/operator/viewer เองได้ รหัส admin เริ่มต้นอยู่ใน bootstrap.txt นอก web root; ห้ามคัดลอกรหัสจริงลง note/log/repository ไม่มีข้อบังคับความยาวรหัสผ่าน แต่ต้องไม่ว่าง ยังมี hashing, login throttling และการยกเลิก session เมื่อสิทธิ์เปลี่ยน
 - ทุกกล้องเริ่มต้นไม่บันทึกจนผู้ใช้กำหนด folder และเปิดบันทึกเอง ปัจจุบันตามการตรวจครั้งล่าสุดผู้ใช้เปิดบันทึกทั้งสามกล้องแล้ว ห้ามนำ default ไปทับค่าของผู้ใช้
 
-## ภาพสด: แบบที่ผู้ใช้เลือกสุดท้าย (1.6.0)
+## ภาพสด: แบบที่ผู้ใช้เลือกสุดท้าย (1.7.0)
 
 ```text
 Camera RTSP → reader หนึ่งตัวต่อกล้อง → บันทึก MP4 (video copy)
-                                  → fMP4 200ms (video copy, ไม่มีเสียง) → authenticated continuous proxy
+                                  → fMP4 100ms (video copy, ไม่มีเสียง) → authenticated continuous proxy
                                   → loopback MPEG-TS relay
-                                      → shared QSV เฉพาะกล้องที่เปิดโหมดเดี่ยว
+                                      → legacy QSV/HLS endpoints (UI ปัจจุบันไม่ใช้)
                                           → short-segment HLS → authenticated web proxy
 ```
 
-- หน้ารวมใช้ต้นฉบับ H.264 remux เป็น fMP4 ชิ้นประมาณ200ms โดย -c:v copy -an ไม่ encode video/resize ลดงาน NAS; browser ยังต้อง decode ภาพเอง งานบันทึก/relay ยังมี AAC encode เดิม ไม่อ้างว่าCPUเป็นศูนย์
-- หน้ารวมมีปุ่มดูเปิด/ปิดเดิมกับชื่อกล้องที่คลิกเข้าโหมดเดี่ยวได้ ไม่มี camera control/settings/snapshot/fullscreen/เสียง; การจัดการกล้องอยู่หน้า management
+- ทั้งหน้ารวมและโหมดเดี่ยวใช้ต้นฉบับ H.264 remux เป็น fMP4 ชิ้นประมาณ100ms โดย -c:v copy -an ไม่ encode video/resize ลดงาน NAS; browser ยังต้อง decode ภาพเอง งานบันทึก/relay ยังมี AAC encode เดิม ไม่อ้างว่าCPUเป็นศูนย์
+- หน้ารวมมีปุ่มดูเปิด/ปิด ชื่อกล้องเปิดโหมดเดี่ยว และปุ่มควบคุมรายกล้องสำหรับoperator/admin เปิดแผงลอยPTZ/advancedsettings; ไม่มีfullscreenในหน้ารวม การตั้งค่าการเชื่อมต่อ/บันทึกอยู่หน้า management
 - ตั้งแต่1.6.1 ต้องมีavcC/SPS/PPSครบก่อนpublishinit: delay_moovอย่างเดียวไม่พอกับVStarcamชุดนี้ จึงเติมavcCว่างจากSPS/PPSในkeyframeแรก โดยไม่แก้encodedframes; JSต้องตรวจขอบเขตและSPS/PPSก่อนสร้างcodec string ([worklog](worklog/2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md))
 - Readerเดิมสร้างfMP4บนstdoutและcacheร่วมกัน ขอบเขต128fragments/64MiB; ไม่เปิดRTSPหรือencoderใหม่ต่อviewer ส่วนHLScopyยังคงไว้สำหรับsnapshot
 - ผู้ชมใหม่รอkeyframeถัดไป แล้วส่งfragmentต่อเนื่องรวมdependentframes ไม่รอครบGOP; MediaSource target0.2s/start0.2s/rebuffer0.2s (ปรับตามผู้ใช้2026-09-28; worklog/2026-09-28_18-41-08_overview-buffer-200ms.md), catchup1.05x, seekเมื่อเกิน2s ตรวจสิทธิ์ซ้ำทุก2sและยกเลิกfetchเมื่อหยุดดู ค่าเหล่านี้ไม่ใช่การรับประกันend-to-end latency ([worklog](worklog/2026-09-28_18-28-23_continuous-copy-fmp4.md))
-- โหมดเดี่ยวเต็มพื้นที่tab มี Back, เสียง/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมทั้งหมดในtabนี้ก่อนเปิดfocus ไม่แก้ค่าการดูที่จำไว้
-- Focusแยกleaseและendpoint/api/focusจากoverview/api/live; QSVเปิดเฉพาะfocusและแชร์ต่อกล้อง/viewers หยุดหลังไม่มีlease8s การดูoverviewไม่ยืดอายุencoder; readerยังบันทึกได้
-- QSV veryfast, async_depth1, lookahead0, Bframes0, 1080p15fps, GOP8 (~0.533s), target/max4Mbps, VBV1Mbit, low_delay_brc1; decode/scaleยังCPU; probeและCPUfallbackultrafast/zerolatencyยังอยู่และหน้าเดี่ยวบอกencoderจริง
-- Focus HLS target0.5s/list12 (NASจริง0.533333s); player liveSync0.7s, maxLatency2s, maxBuffer1.5s, backBuffer1s, catchup≤1.1x เป็นclassicHLSsegmentสั้น ไม่ใช่LL-HLS partial segments และไม่รับประกันcamera-to-screen<1s
-- หนึ่งencoderต่อกล้องที่ถูกfocus ไม่ใช่global one-camera lock; คนละtab/userเลือกคนละกล้องได้ และswitchอาจoverlapช่วงgrace
+- โหมดเดี่ยวเต็มพื้นที่tab มี Back/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมก่อนเปิดเดี่ยว ไม่แก้ค่าการดูที่จำไว้ ทุกโหมดส่งภาพเท่านั้นจึงไม่มีปุ่มเสียงสด
+- UIทั้งสองโหมดส่งoverviewleaseและใช้/api/cameras/{id}/copy-streamเดียวกัน ไม่เริ่มQSV/CPUencoder; legacyfocusendpointยังอยู่สำหรับclientเก่าและหยุดencoderเมื่อleaseหมด8s
+- Legacy QSV (UIปัจจุบันไม่ใช้): veryfast, async_depth1, lookahead0, Bframes0, 1080p15fps, GOP8 (~0.533s), target/max4Mbps, VBV1Mbit, low_delay_brc1; decode/scaleยังCPU; probeและCPUfallbackultrafast/zerolatencyยังอยู่และหน้าเดี่ยวบอกencoderจริง
+- Legacy Focus HLS (UIปัจจุบันไม่ใช้): target0.5s/list12 (NASจริง0.533333s); player liveSync0.7s, maxLatency2s, maxBuffer1.5s, backBuffer1s, catchup≤1.1x เป็นclassicHLSsegmentสั้น ไม่ใช่LL-HLS partial segments และไม่รับประกันcamera-to-screen<1s
+- Legacy clients: หนึ่งencoderต่อกล้องที่ถูกfocus ไม่ใช่global one-camera lock; คนละtab/userเลือกคนละกล้องได้ และswitchอาจoverlapช่วงgrace
 - Snapshotใช้overviewTSล่าสุดแล้วJPEG ไม่เริ่มfocusencoderเพิ่ม; recordingargumentsเดิมคงไว้
 - Source/FFmpeg checksและbrowserผ่านlocalNAS-cache harnessแล้ว ไม่ใช่authenticatedproductionloginหรือphysicalAndroidtest รายละเอียด: [worklog](worklog/2026-09-28_18-04-54_overview-copy-and-focus-qsv.md)
 
@@ -44,7 +44,7 @@ Camera RTSP → reader หนึ่งตัวต่อกล้อง → บ�
 
 ## กล้องและ UI
 
-- ภาพสดเล่นอัตโนมัติ ปิดเสียงเริ่มต้น ไม่มี native timeline/play/pause/speed/PiP; หน้ารวมมีเฉพาะview toggle/ชื่อกล้อง ส่วนเสียง/fullscreen/controlอยู่ในโหมดเดี่ยว ตัวควบคุมถอด listeners เมื่อออกจากหน้า ส่วนดูย้อนหลังยังมี controls ตามเดิม ([worklog](worklog/2026-09-28_16-58-45_live-video-minimal-controls.md))
+- ภาพสดเล่นอัตโนมัติ ปิดเสียงเริ่มต้น ไม่มี native timeline/play/pause/speed/PiP; หน้ารวมมีview toggle/ชื่อกล้อง/ปุ่มcontrol โหมดเดี่ยวมีfullscreen/control ทั้งสองโหมดภาพสดไม่มีเสียง ตัวควบคุมถอด listeners เมื่อออกจากหน้า ส่วนดูย้อนหลังยังมี controls ตามเดิม ([worklog](worklog/2026-09-28_16-58-45_live-video-minimal-controls.md))
 
 - แผง control ลอย ลากและปรับขนาดได้ ไม่บังภาพทั้งจอ PTZ กดค้าง/ปล่อยเพื่อหยุด มี heartbeat, ป้องกันคำสั่งเก่า และ server stop timeout 650 ms
 - รองรับ IR, microphone/speaker volume และ motion ตามความสามารถจริง คำสั่งตอบรับไม่ใช่หลักฐานว่ามอเตอร์/ลำโพงทำงานจริง
@@ -95,3 +95,5 @@ Public repository: https://github.com/gimkim/dvrweb — source root คือโ
 ## ขอบเขตการทดสอบตามคำสั่งผู้ใช้ล่าสุด
 
 ตั้งแต่ 2026-09-28T18:05:36.704868+07:00 ทดสอบเฉพาะ smoke test / functional test ของโค้ด ไม่เปิดหน้าเว็บจริง ไม่ทดสอบbrowserหรือbrowser harness เว้นแต่ผู้ใช้สั่งให้ทดสอบโดยชัดเจน ใช้localcode/backendfixtures และตรวจไฟล์/hashการdeployได้ ผลbrowserก่อนหน้านี้เป็นประวัติ ไม่ใช่สิทธิ์ให้ทดสอบซ้ำ ([worklog](worklog/2026-09-28_18-05-36_code-tests-only-policy.md))
+
+การเปลี่ยนล่าสุด: [ทุกโหมดใช้copy100msและคืนcontrolหน้ารวม](worklog/2026-09-28_18-42-33_unified-copy-controls-100ms.md). Bufferทั้งสาม200ms; ทดสอบเฉพาะโค้ดและไฟล์deploymentตามกติกาเดิม.

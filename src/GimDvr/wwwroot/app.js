@@ -25,15 +25,16 @@ function showOverview(){history.pushState({},'',location.pathname+location.searc
 window.addEventListener('popstate',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('camera');if(me)navigate(id?'single':'live',id).catch(e=>toast(e.message));});
 function renderLive(){
  document.body.classList.remove('single-view');
- $('#main').innerHTML=title('ภาพสด','เลือกชื่อกล้องเพื่อดูเดี่ยวและควบคุม')+`<div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ">⏻</button><h3><button class="camera-open" data-open-camera="${esc(c.id)}" ${c.enabled?'':'disabled'}>${esc(c.name)} ↗</button></h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}">${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="video-status">${!c.enabled?'ปิดใช้งานกล้อง':isViewing(c.id)?'กำลังเชื่อมต่อ…':'ปิดการดูภาพ'}</div></div></article>`).join('')}</div><p class="note">ภาพรวมส่งวิดีโอจากกล้องต่อเนื่องโดยไม่เข้ารหัสใหม่ · ไม่มีเสียงในหน้ารวม · เลือกชื่อกล้องเพื่อดูแบบหน่วงต่ำ</p>`;
+ $('#main').innerHTML=title('ภาพสด','ควบคุมแต่ละกล้อง หรือเลือกชื่อกล้องเพื่อดูเดี่ยว')+`<div class="live-grid">${cameras.map(c=>`<article class="camera-card" data-id="${esc(c.id)}" data-viewing="${c.enabled&&isViewing(c.id)}"><div class="camera-top"><div class="camera-heading"><button type="button" class="view-toggle" data-view-toggle="${esc(c.id)}" role="switch" aria-checked="${c.enabled&&isViewing(c.id)}" aria-label="ดูภาพ ${esc(c.name)}" ${c.enabled?'':'disabled'} title="เปิด/ปิดการดูภาพ">⏻</button><h3><button class="camera-open" data-open-camera="${esc(c.id)}" ${c.enabled?'':'disabled'}>${esc(c.name)} ↗</button></h3></div><span class="tag ${c.recordingEnabled?'recording':'off'}">${c.recordingEnabled?'● REC':'ไม่ได้บันทึก'}</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="video-status">${!c.enabled?'ปิดใช้งานกล้อง':isViewing(c.id)?'กำลังเชื่อมต่อ…':'ปิดการดูภาพ'}</div></div>${me.role!=='viewer'&&c.enabled?`<div class="camera-bottom"><button data-control="${esc(c.id)}">ควบคุม ↗</button></div>`:''}</article>`).join('')}</div><p class="note">ทุกโหมดส่งภาพต่อเนื่องโดยไม่เข้ารหัสใหม่ · สตรีมภาพไม่มีเสียง · เลือกชื่อกล้องเพื่อดูเดี่ยว</p>`;
  document.querySelectorAll('[data-open-camera]').forEach(b=>b.onclick=()=>openSingle(b.dataset.openCamera));
  document.querySelectorAll('[data-view-toggle]').forEach(b=>b.onclick=()=>toggleViewing(b.dataset.viewToggle));
+ bindCameraButtons();
  cameras.filter(c=>c.enabled&&isViewing(c.id)).forEach(c=>connectLive(c).catch(e=>liveMessage(c.id,e.message)));
 }
 function renderSingle(){
  const c=cameras.find(c=>c.id===singleId);if(!c||!c.enabled){showOverview();return;}
  document.body.classList.add('single-view');
- $('#main').innerHTML=`<section class="single-camera camera-card" data-id="${esc(c.id)}" data-viewing="true"><div class="single-top"><button id="backOverview">← กล้องทั้งหมด</button><h2>${esc(c.name)}</h2><span class="single-mode">ภาพสดหน่วงต่ำ</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'?`<button data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button data-live-mute aria-label="เปิดเสียง">🔇</button><button data-live-fullscreen aria-label="เต็มจอ">⛶</button></div><div class="video-status">กำลังเปิดสตรีมหน่วงต่ำ…</div></div></section>`;
+ $('#main').innerHTML=`<section class="single-camera camera-card" data-id="${esc(c.id)}" data-viewing="true"><div class="single-top"><button id="backOverview">← กล้องทั้งหมด</button><h2>${esc(c.name)}</h2><span class="single-mode">ภาพสดต่อเนื่อง · ไม่มีเสียง</span></div><div class="video-wrap"><video id="v-${esc(c.id)}" class="live-video" muted autoplay playsinline disablepictureinpicture disableremoteplayback></video><div class="live-actions">${me.role!=='viewer'?`<button data-control="${esc(c.id)}" aria-label="ควบคุมกล้อง">✥</button>`:''}<button data-live-fullscreen aria-label="เต็มจอ">⛶</button></div><div class="video-status">กำลังเชื่อมต่อภาพสด…</div></div></section>`;
  $('#backOverview').onclick=showOverview;bindCameraButtons();players.push(bindLiveControls($('.single-camera .video-wrap')));
  connectLive(c,'focus').catch(e=>liveMessage(c.id,e.message));
  if(me.role!=='viewer'){document.querySelector('.single-camera .video-wrap').appendChild($('#controls'));showControls(c);}
@@ -50,20 +51,13 @@ function toggleViewing(id){
 async function connectLive(c,mode='overview'){
  liveSessions.get(c.id)?.destroy();const video=document.getElementById(`v-${c.id}`);if(!video||(mode==='overview'&&!isViewing(c.id)))return;
  let active=true,hls=null,heartbeat=null,retry=null;
- const playing=()=>liveMessage(c.id,mode==='focus'?'● LIVE · หน่วงต่ำ':'● LIVE · ส่งต่อวิดีโอโดยไม่ encode'),waiting=()=>liveMessage(c.id,'กำลังรอภาพ…');
+ const playing=()=>liveMessage(c.id,'● LIVE · ส่งต่อวิดีโอโดยไม่ encode'),waiting=()=>liveMessage(c.id,'กำลังรอภาพ…');
  const session={destroy(){if(!active)return;active=false;clearInterval(heartbeat);clearTimeout(retry);hls?.destroy();video.removeEventListener('playing',playing);video.removeEventListener('waiting',waiting);video.removeAttribute('src');video.load();if(liveSessions.get(c.id)===session)liveSessions.delete(c.id);}};
  liveSessions.set(c.id,session);video.addEventListener('playing',playing);video.addEventListener('waiting',waiting);
- const watch=async()=>{const status=await api(`cameras/${c.id}/watch?mode=${mode}`,'POST');if(active&&mode==='focus'){const label=document.querySelector('.single-mode');if(label)label.textContent=status?.encoder==='h264_qsv'?'หน่วงต่ำ · Quick Sync':status?.encoder==='libx264'?'หน่วงต่ำ · CPU สำรอง':'กำลังเปิดสตรีมหน่วงต่ำ…';}};
+ const watch=()=>api(`cameras/${c.id}/watch?mode=overview`,'POST');
  try{await watch();if(!active)return;
  heartbeat=setInterval(()=>{if(active)watch().catch(()=>{});},3000);
- if(mode==='overview'){hls=startCopyStream(video,c.id,message=>{if(active)liveMessage(c.id,message);});return;}
- const src=`api/focus/${c.id}/index.m3u8`;
- if(Hls.isSupported()){
-  hls=new Hls({enableWorker:true,liveSyncDuration:0.7,liveMaxLatencyDuration:2,maxLiveSyncPlaybackRate:1.1,maxBufferLength:1.5,backBufferLength:1,manifestLoadPolicy:{default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:15000,timeoutRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000},errorRetry:{maxNumRetry:30,retryDelayMs:1500,maxRetryDelayMs:4000}}}});
-  hls.loadSource(src);hls.attachMedia(video);hls.on(Hls.Events.MANIFEST_PARSED,()=>{if(active)video.play().catch(()=>{});});
-  hls.on(Hls.Events.ERROR,(_,d)=>{if(active&&d.fatal){liveMessage(c.id,'เชื่อมต่อขัดข้อง กำลังลองใหม่…');if(d.type===Hls.ErrorTypes.MEDIA_ERROR)hls.recoverMediaError();else{clearTimeout(retry);retry=setTimeout(()=>{if(active)hls.loadSource(src);},3000);}}});
- }else if(video.canPlayType('application/vnd.apple.mpegurl')){retry=setTimeout(()=>{if(active){video.src=src;video.play().catch(()=>{});}},4000);}
- else liveMessage(c.id,'เบราว์เซอร์นี้ไม่รองรับวิดีโอ HLS');
+ hls=startCopyStream(video,c.id,message=>{if(active)liveMessage(c.id,message);});
  }catch(e){if(!active)return;session.destroy();throw e;}
 }
 window.onLiveFullscreenChanged=wrap=>{closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));};

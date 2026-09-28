@@ -2,12 +2,12 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('src/GimDvr/wwwroot/app.js','utf8');
 const connect=source.slice(source.indexOf('async function connectLive('),source.indexOf('window.onLiveFullscreenChanged='));
-const pending=[],encoders=[],intervals=new Set(),videos=new Map();let id=0;
+const requests=[],pending=[],encoders=[],intervals=new Set(),videos=new Map();let id=0;
 class FakeHls {
  static isSupported(){return true;}static Events={MANIFEST_PARSED:'manifest',ERROR:'error'};static ErrorTypes={MEDIA_ERROR:'media'};
  constructor(options){this.options=options;this.destroyed=false;encoders.push(this);}loadSource(src){this.src=src;}attachMedia(v){this.video=v;}on(){}destroy(){this.destroyed=true;}
 }
-const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{addEventListener(){},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:()=>new Promise((resolve,reject)=>pending.push({resolve,reject})),isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
+const context=vm.createContext({Hls:FakeHls,Map,Promise,document:{getElementById:id=>{if(!videos.has(id))videos.set(id,{addEventListener(){},removeEventListener(){},removeAttribute(){},load(){},play(){return Promise.resolve();}});return videos.get(id);}},api:(path)=>{requests.push(path);return new Promise((resolve,reject)=>pending.push({resolve,reject}));},isViewing:()=>true,liveMessage(){},setInterval:()=>{intervals.add(++id);return id;},clearInterval:id=>intervals.delete(id),setTimeout(){},clearTimeout(){}});
 context.startCopyStream=(video,id)=>{const player=new FakeHls({copy:true});player.attachMedia(video);player.src='api/cameras/'+id+'/copy-stream';return player;};
 vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=liveSessions;',context);
 (async()=>{
@@ -23,6 +23,6 @@ vm.runInContext('const liveSessions=new Map();'+connect+';globalThis.sessions=li
  context.sessions.forEach(s=>s.destroy());assert.equal(intervals.size,0);assert.equal(context.sessions.size,0);assert.ok(encoders.every(e=>e.destroyed));
  console.log('PASS reconnect replaces one session and shutdown clears all owned resources');
  context.isViewing=()=>false;context.document.querySelector=()=>null;const focus=context.connectLive({id:'a'},'focus');pending.shift().resolve();await focus;
- assert.equal(encoders.at(-1).src,'api/focus/a/index.m3u8');assert.equal(encoders.at(-1).options.liveSyncDuration,0.7);context.sessions.forEach(s=>s.destroy());
- console.log('PASS single-camera focus uses distinct low-buffer stream even when overview preference is off');
+ assert.equal(encoders.at(-1).src,'api/cameras/a/copy-stream');assert.equal(encoders.at(-1).options.copy,true);assert.ok(requests.every(p=>p.endsWith('watch?mode=overview')));context.sessions.forEach(s=>s.destroy());
+ console.log('PASS single-camera view uses same copy stream and never requests an encoder lease, even with overview off');
 })().catch(e=>{console.error(e);process.exitCode=1;});
