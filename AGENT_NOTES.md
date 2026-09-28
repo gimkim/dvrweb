@@ -113,3 +113,5 @@ APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว�
 ชื่อกล้อง/ขึ้น/ปิดอยู่แถวเดียวในcontrol กดชื่อกล้องบนmobileขอfullscreenทันทีจากgestureแล้วlocklandscape(Webถ้ารองรับ);Androidใช้nativebridgeเดิม คงplayerและเปิดcontrolในfullscreen;ออกแล้วunlock/portrait ([worklog](worklog/2026-09-28_19-01-36_pan-header-mobile-landscape.md)).
 
 Fullscreenต้องมีปุ่มกลับหน้ารวมภายในvideo-wrap และซ่อนปุ่มfullscreenซ้ำซ้อน กดกลับครั้งเดียวออกfullscreen/คืนแนวจอ/กลับoverviewโดยคงsession ([worklog](worklog/2026-09-28_19-08-32_fullscreen-direct-back.md)).
+
+Mobile recordings: Android shell exposes Live/Recordings tabs; web retains sidebar navigation. Mobile search/cards/player fit narrow screens. Detection configuration is not an event: current recordings have no event timeline, so absence of metadata means unknown. Vendor alarm push exists on some models, but these cameras remain unverified ([worklog](worklog/2026-09-28_19-10-18_mobile-recordings-detection-review.md)).
