@@ -44,3 +44,6 @@ html:has(.app-fullscreen),body:has(.app-fullscreen){overflow:hidden}
 #controls:has(.dpad) .dialog-title h2{grid-column:1;pointer-events:auto;align-self:center;line-height:1.25;white-space:normal;overflow-wrap:anywhere;max-height:34px}
 #controls:has(.dpad) #closeControls{grid-column:3;justify-self:end;pointer-events:auto;min-height:44px;min-width:44px}
 #controls .dpad{grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr)}#controls .dpad button{width:48px;justify-self:center}
+/* Fullscreen owns its back action because the card header is outside its subtree. */
+.live-back-overview{display:none}.video-wrap:fullscreen>.live-back-overview,.video-wrap.app-fullscreen>.live-back-overview{display:inline-flex;position:absolute;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));z-index:12;align-items:center;min-height:44px;padding:8px 12px;border:0;background:#10191ee8;font-size:13px}
+.video-wrap:fullscreen [data-live-fullscreen],.video-wrap.app-fullscreen [data-live-fullscreen]{display:none}

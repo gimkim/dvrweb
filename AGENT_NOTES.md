@@ -111,3 +111,5 @@ APK1.0.1/versionCode2 ใช้server-ownedplayerเดียวกับเว�
 แผงcontrolใช้พื้นผิวเดียวไม่มีกรอบซ้อน ปุ่มแพน48x44px;ยุบกว้าง216pxบนtouch/240pxdesktop ตั้งค่าขยาย300/310px มีfocus/pressedfeedbackและลากได้ ([worklog](worklog/2026-09-28_18-59-10_compact-mobile-controls.md)).
 
 ชื่อกล้อง/ขึ้น/ปิดอยู่แถวเดียวในcontrol กดชื่อกล้องบนmobileขอfullscreenทันทีจากgestureแล้วlocklandscape(Webถ้ารองรับ);Androidใช้nativebridgeเดิม คงplayerและเปิดcontrolในfullscreen;ออกแล้วunlock/portrait ([worklog](worklog/2026-09-28_19-01-36_pan-header-mobile-landscape.md)).
+
+Fullscreenต้องมีปุ่มกลับหน้ารวมภายในvideo-wrap และซ่อนปุ่มfullscreenซ้ำซ้อน กดกลับครั้งเดียวออกfullscreen/คืนแนวจอ/กลับoverviewโดยคงsession ([worklog](worklog/2026-09-28_19-08-32_fullscreen-direct-back.md)).

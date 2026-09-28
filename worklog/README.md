@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_19-08-32_fullscreen-direct-back.md](2026-09-28_19-08-32_fullscreen-direct-back.md) — one-tap fullscreen back to overview on web/app
+
 - [2026-09-28_19-01-36_pan-header-mobile-landscape.md](2026-09-28_19-01-36_pan-header-mobile-landscape.md) — shared pan header/up row; mobile single-view fullscreen landscape
 
 - [2026-09-28_18-59-10_compact-mobile-controls.md](2026-09-28_18-59-10_compact-mobile-controls.md) — compact borderless floating controls on mobile/web/app
