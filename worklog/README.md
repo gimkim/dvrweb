@@ -111,3 +111,5 @@
 - [2026-09-28_23-28-40_fmp4-fallback-clock.md](2026-09-28_23-28-40_fmp4-fallback-clock.md) — regularize fallback fMP4 frame timestamps
 
 - [2026-09-28_23-29-19_webrtc-port443-options.md](2026-09-28_23-29-19_webrtc-port443-options.md) — WebRTC443/path proxy feasibility
+
+- [2026-09-29_00-32-13_recording-storage-estimate.md](2026-09-29_00-32-13_recording-storage-estimate.md) — current per-camera recording storage estimate
