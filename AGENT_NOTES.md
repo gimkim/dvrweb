@@ -1,6 +1,6 @@
 # GimDVR — Agent notes
 
-ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.6.0 (overview copy / single-camera QSV)
+ปรับปรุง: 2026-09-28 (Asia/Bangkok) — สถานะออกแบบล่าสุด 1.6.1 (overview copy / single-camera QSV)
 
 เอกสารนี้สรุป concept และหลักการปัจจุบัน ต้องอ่านคู่กับ [AGENTS.md](AGENTS.md) และ [ดัชนี worklog](worklog/README.md) รายละเอียดการทดลองเก่าไม่ใช่ข้อกำหนดปัจจุบัน เมื่อผู้ใช้เปลี่ยนแนวทางให้แก้สรุปนี้และสร้าง worklog ไฟล์ใหม่
 
@@ -23,6 +23,7 @@ Camera RTSP → reader หนึ่งตัวต่อกล้อง → บ�
 
 - หน้ารวมใช้ต้นฉบับ H.264 remux เป็น fMP4 ชิ้นประมาณ200ms โดย -c:v copy -an ไม่ encode video/resize ลดงาน NAS; browser ยังต้อง decode ภาพเอง งานบันทึก/relay ยังมี AAC encode เดิม ไม่อ้างว่าCPUเป็นศูนย์
 - หน้ารวมมีปุ่มดูเปิด/ปิดเดิมกับชื่อกล้องที่คลิกเข้าโหมดเดี่ยวได้ ไม่มี camera control/settings/snapshot/fullscreen/เสียง; การจัดการกล้องอยู่หน้า management
+- ตั้งแต่1.6.1 ต้องมีavcC/SPS/PPSครบก่อนpublishinit: delay_moovอย่างเดียวไม่พอกับVStarcamชุดนี้ จึงเติมavcCว่างจากSPS/PPSในkeyframeแรก โดยไม่แก้encodedframes; JSต้องตรวจขอบเขตและSPS/PPSก่อนสร้างcodec string ([worklog](worklog/2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md))
 - Readerเดิมสร้างfMP4บนstdoutและcacheร่วมกัน ขอบเขต128fragments/64MiB; ไม่เปิดRTSPหรือencoderใหม่ต่อviewer ส่วนHLScopyยังคงไว้สำหรับsnapshot
 - ผู้ชมใหม่รอkeyframeถัดไป แล้วส่งfragmentต่อเนื่องรวมdependentframes ไม่รอครบGOP; MediaSource target0.5s/start0.45s/rebuffer0.4s, catchup1.05x, seekเมื่อเกิน2s ตรวจสิทธิ์ซ้ำทุก2sและยกเลิกfetchเมื่อหยุดดู ค่าเหล่านี้ไม่ใช่การรับประกันend-to-end latency ([worklog](worklog/2026-09-28_18-28-23_continuous-copy-fmp4.md))
 - โหมดเดี่ยวเต็มพื้นที่tab มี Back, เสียง/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมทั้งหมดในtabนี้ก่อนเปิดfocus ไม่แก้ค่าการดูที่จำไว้

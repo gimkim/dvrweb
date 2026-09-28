@@ -9,7 +9,15 @@ class CopyPacketReader {
  }
 }
 function copyVideoCodec(init){
- for(let i=4;i+8<init.length;i++)if(init[i]===97&&init[i+1]===118&&init[i+2]===99&&init[i+3]===67)return 'avc1.'+[init[i+5],init[i+6],init[i+7]].map(b=>b.toString(16).padStart(2,'0')).join('');
+ for(let i=4;i+8<init.length;i++)if(init[i]===97&&init[i+1]===118&&init[i+2]===99&&init[i+3]===67){
+  const size=new DataView(init.buffer,init.byteOffset+i-4,4).getUint32(0),end=i-4+size;
+  const invalid=()=>{throw Error('ข้อมูลเริ่มต้น H.264 ไม่มี SPS/PPS ที่สมบูรณ์');};
+  if(size<15||end>init.length||init[i+4]!==1)invalid();
+  let p=i+10;const sps=init[i+9]&31;if(!sps)invalid();
+  function parameters(count){for(let n=0;n<count;n++){if(p+2>end)invalid();const length=(init[p]<<8)|init[p+1];p+=2;if(!length||p+length>end)invalid();p+=length;}}
+  parameters(sps);if(p>=end)invalid();const pps=init[p++];if(!pps)invalid();parameters(pps);
+  return 'avc1.'+[init[i+5],init[i+6],init[i+7]].map(b=>b.toString(16).padStart(2,'0')).join('');
+ }
  throw Error('สตรีมนี้ไม่มี H.264 configuration ที่รองรับ');
 }
 function startCopyStream(video,id,onStatus){
@@ -49,7 +57,7 @@ function startCopyStream(video,id,onStatus){
      onStatus('● LIVE · ส่งต่อภาพต่อเนื่อง ไม่ encode');
      if(video.currentTime>4&&buffer.buffered.start(0)<video.currentTime-4)await update(()=>buffer.remove(0,video.currentTime-3));
     }
-   }catch(e){if(!disposed)onStatus('กำลังเชื่อมต่อสตรีมต่อเนื่องใหม่…');}
+   }catch(e){if(!disposed)onStatus(`เชื่อมต่อใหม่: ${e.message}`);}
    finally{
     clearInterval(watchdog);controller.abort();reader?.cancel().catch(()=>{});video.removeEventListener('waiting',waiting);
     if(url){URL.revokeObjectURL(url);url=null;}

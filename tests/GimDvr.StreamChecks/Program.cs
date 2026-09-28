@@ -67,6 +67,22 @@ store.SaveUser(user.Id,new(user.Username,user.Role,true,"changed-fixture-passwor
 var ring=Path.Combine(root,"ring");using var repeated=new MemoryStream();var firstMoof=boxes.First(b=>b.Type=="moof").Offset;repeated.Write(raw,0,firstMoof);
 var fragmentBytes=raw.AsSpan(firstMoof,mdats[0].Offset+mdats[0].Size-firstMoof).ToArray();for(int i=0;i<150;i++)repeated.Write(fragmentBytes);repeated.Position=0;await FragmentCache.Pump(repeated,ring);
 Check(FragmentCache.ReadIndex(ring)!.Fragments.Length==128&&Directory.GetFiles(ring,"chunk*.m4s").Length==128,"cache evicts old fragment files and caps published entries");
+var goodInit=await File.ReadAllBytesAsync(Path.Combine(cache,"init.mp4"));var avc=Encoding.Latin1.GetString(goodInit).IndexOf("avcC",StringComparison.Ordinal)-4;
+int removed=(int)BinaryPrimitives.ReadUInt32BigEndian(goodInit.AsSpan(avc,4))-8;var emptyInit=goodInit.ToArray();
+foreach(var type in new[]{"moov","trak","mdia","minf","stbl","stsd","avc1","avcC"}){int at=Encoding.Latin1.GetString(emptyInit).IndexOf(type,StringComparison.Ordinal)-4;BinaryPrimitives.WriteUInt32BigEndian(emptyInit.AsSpan(at,4),BinaryPrimitives.ReadUInt32BigEndian(emptyInit.AsSpan(at,4))-(uint)removed);}
+emptyInit=emptyInit[..(avc+8)].Concat(emptyInit[(avc+8+removed)..]).ToArray();
+var repaired=FragmentCache.CompleteInitialization(emptyInit,fragmentBytes);var fixedFile=Path.Combine(root,"repaired-init.mp4");await File.WriteAllBytesAsync(fixedFile,repaired.Concat(fragmentBytes).ToArray());
+var referenceFile=Path.Combine(root,"reference-first-fragment.mp4");await File.WriteAllBytesAsync(referenceFile,goodInit.Concat(fragmentBytes).ToArray());
+var fixedHashes=Hashes(await Run("-v","error","-i",fixedFile,"-map","0:v:0","-f","framemd5","-"));var referenceHashes=Hashes(await Run("-v","error","-i",referenceFile,"-map","0:v:0","-f","framemd5","-"));
+Check(fixedHashes.SequenceEqual(referenceHashes),"empty avcC rebuilt from in-band SPS/PPS preserves decoded first fragment");
+Check(FragmentCache.CompleteInitialization(goodInit,fragmentBytes).SequenceEqual(goodInit),"existing nonempty codec initialization remains unchanged");
+var privateFixture=Path.GetFullPath("artifacts/init-diagnosis");
+if(File.Exists(Path.Combine(privateFixture,"key.m4s"))){
+ var cameraInit=await File.ReadAllBytesAsync(Path.Combine(privateFixture,"init.mp4"));var cameraPacket=await File.ReadAllBytesAsync(Path.Combine(privateFixture,"key.m4s"));
+ var fixedInit=FragmentCache.CompleteInitialization(cameraInit,cameraPacket);var target=Path.Combine(root,"private-camera-repaired.mp4");await File.WriteAllBytesAsync(target,fixedInit.Concat(cameraPacket).ToArray());
+ Check(fixedInit.Length>cameraInit.Length&&Hashes(await Run("-v","error","-i",target,"-map","0:v:0","-f","framemd5","-")).Length>0,"captured camera cache with empty avcC repaired and decoded locally");
+ await File.WriteAllBytesAsync(Path.Combine(privateFixture,"fixed-init.mp4"),fixedInit);
+}
 Console.WriteLine($"{passed} stream checks passed. Evidence: {root}");
 sealed class GatedStream(byte[] bytes,int cut):MemoryStream(bytes)
 {

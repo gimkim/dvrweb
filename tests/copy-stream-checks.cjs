@@ -7,4 +7,7 @@ function reader(bytes,step=1){let p=0;return{async read(){if(p>=bytes.length)ret
  for(const size of [0,16777217,0xffffffff]){const h=Buffer.alloc(4);h.writeUInt32BE(size);await assert.rejects(()=>new CopyPacketReader(reader(h,4)).next(),/Invalid/);}console.log('PASS empty and oversized frames rejected before allocation');
  await assert.rejects(()=>new CopyPacketReader(reader(Buffer.from([0,0,0,5,1,2]))).next(),/ended/);console.log('PASS truncated media frame cannot be appended');
  const fixture=fs.readdirSync('artifacts').filter(n=>n.startsWith('copy-checks-')).sort().at(-1);const init=fs.readFileSync(path.join('artifacts',fixture,'cache','init.mp4'));assert.match(copyVideoCodec(init),/^avc1\.[0-9a-f]{6}$/);assert.throws(()=>copyVideoCodec(new Uint8Array(20)),/H.264/);console.log('PASS real FFmpeg init supplies codec and invalid init rejected');
+ const emptyAvcc=Buffer.from([0,0,0,8,97,118,99,67,0,0,0,16,115,116,116,115,0,0,0,0]);assert.throws(()=>copyVideoCodec(emptyAvcc),/SPS\/PPS/);console.log('PASS empty avcC followed by stts is rejected rather than read as codec avc1.000010');
+ const damaged=Buffer.from(init),avcc=damaged.indexOf('avcC');damaged[avcc+9]=0xe0;assert.throws(()=>copyVideoCodec(damaged),/SPS\/PPS/);console.log('PASS codec initialization requires SPS entries');
+ const truncated=Buffer.from(init);truncated.writeUInt32BE(truncated.length+100,avcc-4);assert.throws(()=>copyVideoCodec(truncated),/SPS\/PPS/);console.log('PASS codec initialization box cannot exceed available bytes');
 })().catch(e=>{console.error(e);process.exitCode=1;});
