@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-39-26_buffer-latency-explanation.md](2026-09-28_18-39-26_buffer-latency-explanation.md) — current buffer settings and latency limits; explanation only, no deployment
+
 - [2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md](2026-09-28_18-37-37_copy-stream-empty-avcc-fix.md) — repair empty H.264 initialization from in-band SPS/PPS, version1.6.1
 
 - [2026-09-28_18-28-23_continuous-copy-fmp4.md](2026-09-28_18-28-23_continuous-copy-fmp4.md) — continuous copy-only fMP4 overview 1.6.0; local functional tests and NAS file deployment
