@@ -163,6 +163,9 @@ Check(MediaService.WebRtcRelayArguments(12345,15).Contains("setts=ts=STARTPTS+N/
 var relay=MediaService.WebRtcRelayArguments(12345);Check(relay.Contains("copy")&&relay.Contains("-an")&&relay[^1]=="udp://127.0.0.1:12345?pkt_size=1316"&&!relay.Contains("-i"),"WebRTC video-only copy relay adds no camera input or encoder");
 Check(MediaService.InputClockArguments(true).SequenceEqual(new[]{"-use_wallclock_as_timestamps","1"}),"arrival-clock opt-in replaces bad camera timestamps without encoding");
 Check(MediaService.InputClockArguments(false).SequenceEqual(new[]{"-fflags","+genpts"}),"unconfigured cameras retain original clock policy");
+for(int i=0;i<8;i++)store.AddRecording(new("parallel-"+i,"test","Test","parallel-"+i,DateTimeOffset.UtcNow.AddDays(2).AddSeconds(i),60,1));
+var claims=await Task.WhenAll(Enumerable.Range(0,8).Select(_=>Task.Run(()=>store.ClaimDetection())));
+Check(claims.All(r=>r is not null)&&claims.Select(r=>r!.Id).Distinct().Count()==8,"parallel detection claims never duplicate a recording");
 Console.WriteLine($"{passed} checks passed. Evidence: {root}");
 sealed class FakeCamera(Store store):CameraClient(store)
 {

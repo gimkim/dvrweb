@@ -177,10 +177,10 @@ def main():
             if not os.path.isfile(request["path"]):
                 print(json.dumps(dict(state="error", error="file_unavailable")), flush=True)
                 continue
-            result = decode(options.ffmpeg, request["path"], duration, person, hardware, options.decoder, options.readrate)
+            result = decode(options.ffmpeg, request["path"], duration, person, hardware, options.decoder, request.get("readrate", options.readrate))
             if hardware and result["frames"] == 0:
                 hardware = False  # Do not repeatedly initialize a broken device for every clip.
-                result = decode(options.ffmpeg, request["path"], duration, person, False, options.decoder, options.readrate)
+                result = decode(options.ffmpeg, request["path"], duration, person, False, options.decoder, request.get("readrate", options.readrate))
         except Exception:
             result = dict(state="error", error="analysis_failed")
         print(json.dumps(result, allow_nan=False), flush=True)

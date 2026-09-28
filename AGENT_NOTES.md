@@ -153,3 +153,5 @@ Live snapshot button captures current video frame client-side as native-resoluti
 Snapshot placement: overview footer beside Control; single/fullscreen bottom actions beside Control. No separate top-right snapshot overlay.
 
 Initial live startup uses shared spinner/short label covering native poster until playing; rebuffer after first playback does not re-cover image. Layout switching preserves state; new viewing session resets it.
+
+1.10.3 NAS detection now2persistent lanes, readrate0/unlimited in external detection-tuning.json. Defaults remain1lane/4x for other installs; adjustable1–4lanes,0–32readrate. Serialized claims + owner lock, independent errors, remote requests serialized. Logs track lanes/active jobs; short night sample~11x aggregate, not long-run capacity. [worklog](worklog/2026-09-29_02-19-01_detection-concurrency-readrate.md).

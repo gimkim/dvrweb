@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace GimDvr;
 
 // Completed files reuse the recorder input with no extra camera connection or video encoding.
-// One model/process and one clip at a time; the disk lock also excludes IIS recycle overlap.
+// Bounded persistent detector lanes; one owner lock excludes IIS recycle overlap.
 public sealed class DetectionService(Store store,Paths paths,IConfiguration config,ILogger<DetectionService> log):BackgroundService
 {
     static readonly JsonSerializerOptions Json=new(){PropertyNameCaseInsensitive=true};
@@ -14,14 +14,18 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
     long completed,partial,failed;
     double completedVideoSeconds,totalWorkSeconds,lastVideoSeconds,lastSummarySeconds;
     string workerState="starting";
-    string? currentRecording;
+    readonly System.Collections.Concurrent.ConcurrentDictionary<int,string> activeRecordings=new();
+    readonly SemaphoreSlim remoteGate=new(1,1);
+    int scheduleTurn;
+    double readRate=>Math.Clamp(config.GetValue<double?>("Dvr:DetectionReadRate")??4,0,32);
+    int concurrency=>Math.Clamp(config.GetValue<int?>("Dvr:DetectionConcurrency")??1,1,4);
     void Summary()
     {
         object stats;
         lock(metricsGate)
         {
             var elapsed=uptime.Elapsed.TotalSeconds;var window=elapsed-lastSummarySeconds;
-            stats=new{workerState,currentRecording,uptimeSeconds=Math.Round(elapsed,2),windowSeconds=Math.Round(window,2),completed,partial,failed,
+            stats=new{workerState=activeRecordings.IsEmpty?workerState:"processing",concurrency,readRate,activeJobs=activeRecordings.Count,currentRecordings=activeRecordings.Values.ToArray(),uptimeSeconds=Math.Round(elapsed,2),windowSeconds=Math.Round(window,2),completed,partial,failed,
                 completedVideoSeconds=Math.Round(completedVideoSeconds,2),totalWorkSeconds=Math.Round(totalWorkSeconds,2),
                 completedVideoSecondsPerWallSecond=window>0?Math.Round((completedVideoSeconds-lastVideoSeconds)/window,3):0,
                 lifetimeVideoSecondsPerWallSecond=elapsed>0?Math.Round(completedVideoSeconds/elapsed,3):0};
@@ -61,7 +65,7 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
                 using var gate=new FileStream(Path.Combine(paths.Runtime,"detection.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);
                 diagnostics.Write("owner_acquired",new{});
                 store.ResetInterruptedDetections();
-                await Run(python,script,model,remote,stoppingToken);
+                await Task.WhenAll(Enumerable.Range(0,concurrency).Select(lane=>RunLane(lane,python,script,model,remote,stoppingToken)));
             }
             catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){break;}
             catch(Exception e){workerState="retrying";diagnostics.Write("worker_error",new{errorType=e.GetType().Name});log.LogWarning("Detection worker unavailable ({Type}); retrying",e.GetType().Name);}
@@ -70,37 +74,42 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
         }
         finally{heartbeatStop.Cancel();await heartbeat;await remotePoll;workerState="stopped";Summary();diagnostics.Write("service_stop",new{});}
     }
-    async Task Run(string python,string script,string model,RemoteDetection remote,CancellationToken ct)
+    async Task RunLane(int lane,string python,string script,string model,RemoteDetection remote,CancellationToken ct)
+    {
+        while(!ct.IsCancellationRequested){try{await Run(lane,python,script,model,remote,ct);}catch(OperationCanceledException) when(ct.IsCancellationRequested){break;}catch(Exception e){diagnostics.Write("lane_error",new{lane,errorType=e.GetType().Name});try{await Task.Delay(15000,ct);}catch(OperationCanceledException){break;}}}
+    }
+    async Task Run(int lane,string python,string script,string model,RemoteDetection remote,CancellationToken ct)
     {
         await using var detector=new DetectionProcess(python,script,model,paths.Ffmpeg,config["Dvr:DetectionDevice"]??"GPU",events:diagnostics.Write);
-        var turn=0;
+
         while(!ct.IsCancellationRequested)
         {
-            var recording=store.NextDetection(++turn%4==0);
+            var recording=store.ClaimDetection(Interlocked.Increment(ref scheduleTurn)%4==0);
             if(recording is null){workerState="idle";await Task.Delay(3000,ct);continue;}
-            workerState="processing";currentRecording=recording.Id;
+            workerState="processing";activeRecordings[lane]=recording.Id;
             var watch=Stopwatch.StartNew();
-            diagnostics.Write("clip_start",new{recordingId=recording.Id,cameraId=recording.CameraId,videoSeconds=recording.Duration,
+            diagnostics.Write("clip_start",new{lane,recordingId=recording.Id,cameraId=recording.CameraId,videoSeconds=recording.Duration,
                 ageAtStartSeconds=Math.Round((DateTimeOffset.UtcNow-recording.Start.AddSeconds(recording.Duration)).TotalSeconds,2)});
-            store.SaveDetection(recording.Id,new("processing"));
+
             try
             {
                 using var timeout=CancellationTokenSource.CreateLinkedTokenSource(ct);timeout.CancelAfter(TimeSpan.FromMinutes(5));
-                var result=await remote.Analyze(recording,timeout.Token);
+                DetectionResult? result=null;
+                if(remote.Available){await remoteGate.WaitAsync(timeout.Token);try{result=await remote.Analyze(recording,timeout.Token);}finally{remoteGate.Release();}}
                 if(result is null)
                 {
-                    var reply=await detector.Request(new{path=recording.Path,duration=recording.Duration},timeout.Token);
+                    var reply=await detector.Request(new{path=recording.Path,duration=recording.Duration,readrate=readRate},timeout.Token);
                     result=reply.Deserialize<DetectionResult>(Json)??throw new IOException("No result");
                 }
                 if(result.State is not("complete" or "partial" or "error"))throw new IOException("Invalid result");
                 store.SaveDetection(recording.Id,result);
                 lock(metricsGate){totalWorkSeconds+=watch.Elapsed.TotalSeconds;if(result.State=="complete"){completed++;completedVideoSeconds+=recording.Duration;}else if(result.State=="partial")partial++;else failed++;}
-                diagnostics.Write("clip_finish",new{recordingId=recording.Id,cameraId=recording.CameraId,videoSeconds=recording.Duration,
+                diagnostics.Write("clip_finish",new{lane,recordingId=recording.Id,cameraId=recording.CameraId,videoSeconds=recording.Duration,
                     elapsedSeconds=Math.Round(watch.Elapsed.TotalSeconds,3),videoSecondsPerWorkSecond=Math.Round(recording.Duration/Math.Max(watch.Elapsed.TotalSeconds,0.001),3),result});
             }
-            catch(OperationCanceledException) when(ct.IsCancellationRequested){diagnostics.Write("clip_cancelled",new{recordingId=recording.Id,elapsedSeconds=watch.Elapsed.TotalSeconds});store.SaveDetection(recording.Id,new("pending"));throw;}
-            catch(Exception e){lock(metricsGate){failed++;totalWorkSeconds+=watch.Elapsed.TotalSeconds;}diagnostics.Write("clip_error",new{recordingId=recording.Id,elapsedSeconds=watch.Elapsed.TotalSeconds,errorType=e.GetType().Name,timeout=e is OperationCanceledException});store.SaveDetection(recording.Id,new("error",Error:"worker_failed"));throw;}
-            finally{currentRecording=null;}
+            catch(OperationCanceledException) when(ct.IsCancellationRequested){diagnostics.Write("clip_cancelled",new{lane,recordingId=recording.Id,elapsedSeconds=watch.Elapsed.TotalSeconds});store.SaveDetection(recording.Id,new("pending"));throw;}
+            catch(Exception e){lock(metricsGate){failed++;totalWorkSeconds+=watch.Elapsed.TotalSeconds;}diagnostics.Write("clip_error",new{lane,recordingId=recording.Id,elapsedSeconds=watch.Elapsed.TotalSeconds,errorType=e.GetType().Name,timeout=e is OperationCanceledException});store.SaveDetection(recording.Id,new("error",Error:"worker_failed"));throw;}
+            finally{activeRecordings.TryRemove(lane,out _);}
             workerState="between_clips";
             await Task.Delay(1000,ct);
         }

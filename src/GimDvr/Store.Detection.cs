@@ -35,6 +35,12 @@ public sealed partial class Store
         while(reader.Read())results[reader.GetString(0)]=reader.IsDBNull(2)?new(reader.GetString(1)):JsonSerializer.Deserialize<DetectionResult>(reader.GetString(2))!;
         return recordings.Select(r=>r with{Detection=results.GetValueOrDefault(r.Id)??new("pending")}).ToList();
     }
+    readonly object detectionClaimGate=new();
+    // The service holds the cross-process owner lock; serialize local lane claims.
+    public Recording? ClaimDetection(bool oldest=false)
+    {
+        lock(detectionClaimGate){var recording=NextDetection(oldest);if(recording is not null)SaveDetection(recording.Id,new("processing"));return recording;}
+    }
     public Recording? NextDetection(bool oldest=false)
     {
         using var db=Open();using var cmd=db.CreateCommand();
