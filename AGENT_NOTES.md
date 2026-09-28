@@ -23,7 +23,8 @@ Camera RTSP → reader หนึ่งตัวต่อกล้อง → บ�
 
 - หน้ารวมใช้ต้นฉบับ H.264 remux เป็น HLS โดย -c:v copy -an ไม่ encode video/resize ลดงาน NAS; browser ยังต้อง decode ภาพเอง งานบันทึก/relay ยังมี AAC encode เดิม ไม่อ้างว่าCPUเป็นศูนย์
 - หน้ารวมมีปุ่มดูเปิด/ปิดเดิมกับชื่อกล้องที่คลิกเข้าโหมดเดี่ยวได้ ไม่มี camera control/settings/snapshot/fullscreen/เสียง; การจัดการกล้องอยู่หน้า management
-- Overview HLS target2s/list6 ตัดตาม keyframe ของกล้อง จึงมีdelayมากกว่าหน้าเดี่ยว; cacheวนขนาดจำกัดสร้างในreaderเดียวกับงานบันทึก ไม่เปิดRTSPใหม่ต่อviewer
+- Overview HLS target2s/list6 ตัดตาม keyframe ของกล้อง; playlistจริงที่อ่าน2026-09-28เป็น4sทุกกล้อง จึงมีdelayมากกว่าหน้าเดี่ยว; cacheวนขนาดจำกัดสร้างในreaderเดียวกับงานบันทึก ไม่เปิดRTSPใหม่ต่อviewer
+- Overview playerลดเป็นliveSyncCount1/maxLatencyCount2, maxBuffer4s/backBuffer4s, catchup≤1.1x, liveSyncOnStallIncrease0 (เดิมsync2segments=8s ตอนนี้target4sสำหรับsegmentsจริง); ไม่เท่ากับend-to-end4s และยังมีpublicationdelay4s ห้ามอ้างsubsecondหรือทดสอบจริงแล้ว ([worklog](worklog/2026-09-28_18-11-23_reduce-overview-player-delay.md))
 - โหมดเดี่ยวเต็มพื้นที่tab มี Back, เสียง/fullscreen และcontrolลอยอัตโนมัติสำหรับoperator/admin; ปิดplayerหน้ารวมทั้งหมดในtabนี้ก่อนเปิดfocus ไม่แก้ค่าการดูที่จำไว้
 - Focusแยกleaseและendpoint/api/focusจากoverview/api/live; QSVเปิดเฉพาะfocusและแชร์ต่อกล้อง/viewers หยุดหลังไม่มีlease8s การดูoverviewไม่ยืดอายุencoder; readerยังบันทึกได้
 - QSV veryfast, async_depth1, lookahead0, Bframes0, 1080p15fps, GOP8 (~0.533s), target/max4Mbps, VBV1Mbit, low_delay_brc1; decode/scaleยังCPU; probeและCPUfallbackultrafast/zerolatencyยังอยู่และหน้าเดี่ยวบอกencoderจริง

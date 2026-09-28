@@ -4,6 +4,8 @@
 
 ## งานล่าสุด
 
+- [2026-09-28_18-11-23_reduce-overview-player-delay.md](2026-09-28_18-11-23_reduce-overview-player-delay.md) — reduce copy-only overview target delay; code tests only
+
 - [2026-09-28_18-05-36_code-tests-only-policy.md](2026-09-28_18-05-36_code-tests-only-policy.md) — user policy: code smoke/functional tests only
 
 - [2026-09-28_18-04-54_overview-copy-and-focus-qsv.md](2026-09-28_18-04-54_overview-copy-and-focus-qsv.md) — overview video copy and single-camera low-latency QSV 1.5.0
