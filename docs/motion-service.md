@@ -1,3 +1,5 @@
+> Current policy (1.10.5): DVR detection is local-only. Remote MotionService integration described below is historical and no longer called or polled by DVR. Local admin worker/readrate settings remain active.
+
 # Remote MotionService (1.9.0)
 
 NAS owns scheduling, SQLite and original recordings. It polls the configured authenticated remote `/health` every15seconds (3second timeout). Ready protocol1 enables remote work on subsequent clips; ongoing local analysis finishes normally. Each job uploads one completed MP4 over HTTPS, never a camera URL or filesystem path. On connection/HTTP/timeout/invalid/incomplete-result failure, the same queue attempt falls back to the NAS OpenVINO detector. A later successful poll restores remote routing. Cancellation during shutdown never starts a fallback job. The local Python process starts lazily and remains reusable after a fallback. One global NAS owner/clip at a time is unchanged.

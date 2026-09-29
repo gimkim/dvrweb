@@ -15,7 +15,6 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
     double completedVideoSeconds,totalWorkSeconds,lastVideoSeconds,lastSummarySeconds;
     string workerState="starting";
     readonly System.Collections.Concurrent.ConcurrentDictionary<int,string> activeRecordings=new();
-    readonly SemaphoreSlim remoteGate=new(1,1);
     int scheduleTurn;
     double readRate=>store.DetectionSettings(config).ReadRate;
     int concurrency=>store.DetectionSettings(config).Workers;
@@ -50,8 +49,6 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
         var model=Path.Combine(runtime,"models","person.xml");
         Directory.CreateDirectory(paths.Runtime);
         using var heartbeatStop=CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        using var remote=new RemoteDetection(config,diagnostics.Write);
-        var remotePoll=remote.Poll(heartbeatStop.Token);
         var heartbeat=Heartbeat(heartbeatStop.Token);
         Summary();
         try
@@ -60,25 +57,25 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
         {
             try
             {
-                if((!File.Exists(python)||!File.Exists(model))&&!remote.Available){workerState="waiting_runtime";diagnostics.Write("runtime_missing",new{pythonPresent=File.Exists(python),modelPresent=File.Exists(model)});await Task.Delay(TimeSpan.FromMinutes(1),stoppingToken);continue;}
+                if(!File.Exists(python)||!File.Exists(model)){workerState="waiting_runtime";diagnostics.Write("runtime_missing",new{pythonPresent=File.Exists(python),modelPresent=File.Exists(model)});await Task.Delay(TimeSpan.FromMinutes(1),stoppingToken);continue;}
                 workerState="waiting_owner";
                 using var gate=new FileStream(Path.Combine(paths.Runtime,"detection.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);
                 diagnostics.Write("owner_acquired",new{});
                 store.ResetInterruptedDetections();
-                await Task.WhenAll(Enumerable.Range(0,4).Select(lane=>RunLane(lane,python,script,model,remote,stoppingToken)));
+                await Task.WhenAll(Enumerable.Range(0,4).Select(lane=>RunLane(lane,python,script,model,stoppingToken)));
             }
             catch(OperationCanceledException) when(stoppingToken.IsCancellationRequested){break;}
             catch(Exception e){workerState="retrying";diagnostics.Write("worker_error",new{errorType=e.GetType().Name});log.LogWarning("Detection worker unavailable ({Type}); retrying",e.GetType().Name);}
             try{await Task.Delay(TimeSpan.FromSeconds(15),stoppingToken);}catch(OperationCanceledException){break;}
         }
         }
-        finally{heartbeatStop.Cancel();await heartbeat;await remotePoll;workerState="stopped";Summary();diagnostics.Write("service_stop",new{});}
+        finally{heartbeatStop.Cancel();await heartbeat;workerState="stopped";Summary();diagnostics.Write("service_stop",new{});}
     }
-    async Task RunLane(int lane,string python,string script,string model,RemoteDetection remote,CancellationToken ct)
+    async Task RunLane(int lane,string python,string script,string model,CancellationToken ct)
     {
-        while(!ct.IsCancellationRequested){try{await Run(lane,python,script,model,remote,ct);}catch(OperationCanceledException) when(ct.IsCancellationRequested){break;}catch(Exception e){diagnostics.Write("lane_error",new{lane,errorType=e.GetType().Name});try{await Task.Delay(15000,ct);}catch(OperationCanceledException){break;}}}
+        while(!ct.IsCancellationRequested){try{await Run(lane,python,script,model,ct);}catch(OperationCanceledException) when(ct.IsCancellationRequested){break;}catch(Exception e){diagnostics.Write("lane_error",new{lane,errorType=e.GetType().Name});try{await Task.Delay(15000,ct);}catch(OperationCanceledException){break;}}}
     }
-    async Task Run(int lane,string python,string script,string model,RemoteDetection remote,CancellationToken ct)
+    async Task Run(int lane,string python,string script,string model,CancellationToken ct)
     {
         await using var detector=new DetectionProcess(python,script,model,paths.Ffmpeg,config["Dvr:DetectionDevice"]??"GPU",events:diagnostics.Write);
 
@@ -95,13 +92,8 @@ public sealed class DetectionService(Store store,Paths paths,IConfiguration conf
             try
             {
                 using var timeout=CancellationTokenSource.CreateLinkedTokenSource(ct);timeout.CancelAfter(TimeSpan.FromMinutes(5));
-                DetectionResult? result=null;
-                if(remote.Available){await remoteGate.WaitAsync(timeout.Token);try{result=await remote.Analyze(recording,timeout.Token);}finally{remoteGate.Release();}}
-                if(result is null)
-                {
-                    var reply=await detector.Request(new{path=recording.Path,duration=recording.Duration,readrate=readRate},timeout.Token);
-                    result=reply.Deserialize<DetectionResult>(Json)??throw new IOException("No result");
-                }
+                var reply=await detector.Request(new{path=recording.Path,duration=recording.Duration,readrate=readRate},timeout.Token);
+                var result=reply.Deserialize<DetectionResult>(Json)??throw new IOException("No result");
                 if(result.State is not("complete" or "partial" or "error"))throw new IOException("Invalid result");
                 store.SaveDetection(recording.Id,result);
                 lock(metricsGate){totalWorkSeconds+=watch.Elapsed.TotalSeconds;if(result.State=="complete"){completed++;completedVideoSeconds+=recording.Duration;}else if(result.State=="partial")partial++;else failed++;}

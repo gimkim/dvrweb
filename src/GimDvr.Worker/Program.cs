@@ -10,7 +10,6 @@ builder.Configuration["Dvr:WorkerProcess"]="true";
 builder.Services.AddWindowsService(o=>o.ServiceName="GimDvrRecorder");
 var env=new WorkerEnvironment{ContentRootPath=AppContext.BaseDirectory};
 var paths=new Paths(builder.Configuration,env);
-builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"detection-remote.json"),optional:true,reloadOnChange:false);
 builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"live-clock.json"),optional:true,reloadOnChange:false);
 builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"detection-tuning.json"),optional:true,reloadOnChange:true);
 builder.Services.AddSingleton(paths);

@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 if(args.Length!=2)throw new ArgumentException("runtime directory and ffmpeg required; synthetic fixture only");
 var root=Path.GetFullPath("artifacts/detection-integration-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"));Directory.CreateDirectory(root);
-var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DetectionConcurrency"]="2",["Dvr:DetectionReadRate"]="0",["Dvr:DataRoot"]=root,["Dvr:DetectionRuntime"]=Path.GetFullPath(args[0]),["Dvr:Ffmpeg"]=args[1]}).Build();
+var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DetectionRemoteUrl"]="invalid-legacy-url",["Dvr:DetectionRemoteKey"]="unused-fixture",["Dvr:DetectionConcurrency"]="2",["Dvr:DetectionReadRate"]="0",["Dvr:DataRoot"]=root,["Dvr:DetectionRuntime"]=Path.GetFullPath(args[0]),["Dvr:Ffmpeg"]=args[1]}).Build();
 var paths=new Paths(config,new Env(root));var store=new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys"))));
 var clip=Path.Combine(root,"synthetic.mp4");
 using(var ffmpeg=new Process{StartInfo=new(args[1]){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true}})
@@ -44,6 +44,8 @@ var events=logs.Select(j=>j.RootElement.GetProperty("kind").GetString()).ToList(
 if(events.Take(events.IndexOf("clip_finish")).Count(x=>x=="clip_start")!=2)throw new Exception("Lanes did not overlap");
 if(logs.Count(j=>j.RootElement.GetProperty("kind").GetString()=="clip_finish")!=2)throw new Exception("Duplicate/missing results");
 Console.WriteLine("PASS two independent detector lanes overlap and complete exactly once");
+if(logs.Any(j=>j.RootElement.GetProperty("kind").GetString()!.StartsWith("remote_")))throw new Exception("Remote detection was activated");
+Console.WriteLine("PASS legacy remote settings are ignored and no remote polling/events occur");
 var finished=logs.First(j=>j.RootElement.GetProperty("kind").GetString()=="clip_finish").RootElement.GetProperty("data");
 if(finished.GetProperty("elapsedSeconds").GetDouble()<=0||finished.GetProperty("videoSeconds").GetDouble()!=6)throw new Exception("Invalid timing");
 var summary=logs.Last(j=>j.RootElement.GetProperty("kind").GetString()=="summary").RootElement.GetProperty("data");

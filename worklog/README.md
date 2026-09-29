@@ -123,3 +123,5 @@
 - [2026-09-29_02-19-01_detection-concurrency-readrate.md](2026-09-29_02-19-01_detection-concurrency-readrate.md) — bounded concurrent detection and uncapped input
 
 - [2026-09-29_02-22-20_admin-detection-settings.md](2026-09-29_02-22-20_admin-detection-settings.md) — admin detection speed and worker settings
+
+- [2026-09-29_11-15-41_local-only-detection.md](2026-09-29_11-15-41_local-only-detection.md) — remove DVR remote detection/polling

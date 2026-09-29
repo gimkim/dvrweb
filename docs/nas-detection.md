@@ -1,3 +1,5 @@
+> Current policy (1.10.5): DVR detection is local-only. Remote MotionService integration described below is historical and no longer called or polled by DVR. Local admin worker/readrate settings remain active.
+
 # Recording detection (1.8.0)
 
 Completed catalogued MP4 files are analysed in the background, one at a time across all cameras. This reuses video already recorded by the single camera reader. It creates no additional RTSP connections and does not re-encode or alter recordings/live streams. Results arrive after the minute/file is finalized plus queue time, not live.
