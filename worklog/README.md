@@ -127,3 +127,5 @@
 - [2026-09-29_11-15-41_local-only-detection.md](2026-09-29_11-15-41_local-only-detection.md) — remove DVR remote detection/polling
 
 - [2026-09-29_15-30-01_camera-control-port-discovery.md](2026-09-29_15-30-01_camera-control-port-discovery.md) — VStarcam dynamic HTTP port discovery restores control endpoint routing
+
+- [2026-09-29_15-53-44_camera-input-resolution-diagnostics.md](2026-09-29_15-53-44_camera-input-resolution-diagnostics.md) — measured1080p input, recording gaps and stale15fps live clock

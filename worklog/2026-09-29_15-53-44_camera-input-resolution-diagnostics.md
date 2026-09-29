@@ -1,0 +1,7 @@
+# Camera input resolution / stutter investigation
+
+User asks current source resolution and suspects camera bandwidth. Read-only deployed SQLite confirms all three RTSP paths /tcp/av0_0. ffprobe of three recent completed recordings per camera confirms H.264 1920x1080, with video copied by MediaService (no resizing/encoding). No new camera RTSP connections or browser tests used.
+
+Sample around 15:48–15:52 Bangkok: Garage total file bitrate 0.20–0.31 Mbps, packet-rate averages approximately4–8/s; Front door1.00–1.22 Mbps and24–30/s; Side0.91–1.12 Mbps and20–26/s. These are recent recording averages, not configured camera bitrate or network capacity. A subsequent latest-file packet PTS sample found maximum gaps Garage5.514s (14 gaps>0.5s), Front door2.548s (15), Side3.399s (14). Garage latest file advanced between samples. Arrival-clock recording policy is enabled for all three, so files show interruptions in the NAS ingest/timestamp path before the browser; this does not isolate Wi-Fi, camera CPU, TCP bursts, or NAS scheduling.
+
+Additional verified mismatch: deployed live-clock.json still fixes live output to15fps, whereas recent input packets sometimes average nearly30/s. Historical15fps measurements are stale for these samples; output clock requires remeasurement before changing policy. No settings, application code, camera configuration, or deployment changed. No browser test or physical camera changes. Diagnostic worklog only; root cause not established and sustained capacity not measured.
