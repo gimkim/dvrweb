@@ -125,3 +125,5 @@
 - [2026-09-29_02-22-20_admin-detection-settings.md](2026-09-29_02-22-20_admin-detection-settings.md) — admin detection speed and worker settings
 
 - [2026-09-29_11-15-41_local-only-detection.md](2026-09-29_11-15-41_local-only-detection.md) — remove DVR remote detection/polling
+
+- [2026-09-29_15-30-01_camera-control-port-discovery.md](2026-09-29_15-30-01_camera-control-port-discovery.md) — VStarcam dynamic HTTP port discovery restores control endpoint routing

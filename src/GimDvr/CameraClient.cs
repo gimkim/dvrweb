@@ -8,15 +8,21 @@ namespace GimDvr;
 public partial class CameraClient(Store store)
 {
     readonly ConcurrentDictionary<string, SemaphoreSlim> controls = new();
+    readonly CameraHttpPorts httpPorts = new();
     public string Rtsp(Camera c) => $"rtsp://{Uri.EscapeDataString(c.Username)}:{Uri.EscapeDataString(store.Password(c))}@{c.Host}:{c.RtspPort}{c.RtspPath}";
     HttpClient Client(Camera c) => new(new HttpClientHandler { Credentials = new NetworkCredential(c.Username, store.Password(c)), PreAuthenticate = true, AllowAutoRedirect = false, UseProxy = false }) { Timeout = TimeSpan.FromSeconds(8) };
     public async Task<string> Get(Camera c,string path,CancellationToken ct)
     {
         if(c.Driver!="vstarcam")throw new NotSupportedException("กล้อง RTSP นี้รองรับดูภาพและบันทึก; การควบคุมต้องใช้ไดรเวอร์ที่รองรับ");
+        var port=await httpPorts.Resolve(c,ct,refreshExpired:path=="get_camera_params.cgi");
         using var client=Client(c);
         // Older VStarcam CGI additionally requires these parameters after HTTP authentication.
-        var uri=$"http://{c.Host}:{c.HttpPort}/{path}{(path.Contains('?')?'&':'?')}loginuse={Uri.EscapeDataString(c.Username)}&loginpas={Uri.EscapeDataString(store.Password(c))}";
-        using var response=await client.GetAsync(uri,ct);
+        var uri=$"http://{c.Host}:{port}/{path}{(path.Contains('?')?'&':'?')}loginuse={Uri.EscapeDataString(c.Username)}&loginpas={Uri.EscapeDataString(store.Password(c))}";
+        HttpResponseMessage response;
+        try { response=await client.GetAsync(uri,ct); }
+        catch(HttpRequestException) { httpPorts.Invalidate(c); throw; }
+        catch(OperationCanceledException) { httpPorts.Invalidate(c); throw; }
+        using var responseScope=response;
         if(!response.IsSuccessStatusCode)throw new InvalidOperationException($"กล้องตอบ HTTP {(int)response.StatusCode}");
         return await response.Content.ReadAsStringAsync(ct);
     }

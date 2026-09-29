@@ -20,6 +20,40 @@ var media=new MediaService(store,new CameraClient(store),paths,NullLogger<MediaS
 int passed=0;
 void Check(bool ok,string name){if(!ok)throw new Exception(name);Console.WriteLine("PASS "+name);passed++;}
 void Reject(Action action,string name){try{action();}catch(ArgumentException){Check(true,name);return;}throw new Exception("Expected rejection: "+name);}
+var discoveryCamera=new Camera { Host="192.168.1.37", Uid="TESTCAM" };
+var discoveryReply=new byte[524]; discoveryReply[0]=0x44; discoveryReply[1]=0x48; discoveryReply[2]=1; discoveryReply[3]=8;
+System.Text.Encoding.ASCII.GetBytes(discoveryCamera.Host).CopyTo(discoveryReply,4);
+System.Text.Encoding.ASCII.GetBytes(discoveryCamera.Uid).CopyTo(discoveryReply,92);
+discoveryReply[90]=1; discoveryReply[91]=93;
+var sender=System.Net.IPAddress.Parse(discoveryCamera.Host);
+Check(CameraHttpPorts.ParseReply(discoveryReply,sender,discoveryCamera)==23809,"discovery decodes little endian HTTP port");
+Check(CameraHttpPorts.ParseReply(discoveryReply,System.Net.IPAddress.Loopback,discoveryCamera)==null,"discovery rejects other sender");
+Check(CameraHttpPorts.ParseReply(discoveryReply,sender,discoveryCamera with { Uid="OTHER" })==null,"discovery rejects different camera UID");
+Check(CameraHttpPorts.ParseReply(new byte[10],sender,discoveryCamera)==null,"discovery rejects truncated packet");
+discoveryReply[3]=1;
+Check(CameraHttpPorts.ParseReply(discoveryReply,sender,discoveryCamera)==null,"discovery rejects request packet");
+discoveryReply[3]=8; discoveryReply[90]=0; discoveryReply[91]=0;
+Check(CameraHttpPorts.ParseReply(discoveryReply,sender,discoveryCamera)==null,"discovery rejects zero port");
+var loopCamera=new Camera { Host="127.0.0.1", Uid="TESTCAM", HttpPort=1234 };
+var loopReply=(byte[])discoveryReply.Clone();Array.Clear(loopReply,4,16);
+System.Text.Encoding.ASCII.GetBytes(loopCamera.Host).CopyTo(loopReply,4);loopReply[90]=1;loopReply[91]=93;
+var portResolver=new CameraHttpPorts();
+using(var responder=new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback,8600)))
+{
+    var resolve=portResolver.Resolve(loopCamera,CancellationToken.None);
+    using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(3));
+    var request=await responder.ReceiveAsync(deadline.Token);
+    Check(request.Buffer.SequenceEqual(new byte[]{0x44,0x48,1,1}),"discovery sends credential-free request");
+    await responder.SendAsync(loopReply,request.RemoteEndPoint);
+    Check(await resolve==23809,"resolver uses discovered rather than stale configured port");
+}
+Check(await portResolver.Resolve(loopCamera,CancellationToken.None)==23809,"pan and stop reuse cached port without UDP responder");
+using(var canceled=new CancellationTokenSource())
+{
+    canceled.Cancel();bool observed=false;
+    try { await portResolver.Resolve(loopCamera,canceled.Token); } catch(OperationCanceledException) { observed=true; }
+    Check(observed,"resolver honors caller cancellation");
+}
 Check(File.Exists(Path.Combine(paths.Data,"bootstrap.txt")),"bootstrap outside web root");
 var admin=store.Users().Single();
 Reject(()=>store.SaveUser(admin.Id,new("admin","viewer",true,null)),"cannot demote last admin");

@@ -159,3 +159,5 @@ Initial live startup uses shared spinner/short label covering native poster unti
 1.10.4 admin System page exposes NAS workers1–4/readrate0–32(0unlimited). SQLite detection settings override external tuning once saved. Dynamic lanes scale at job boundaries and dispose inactive model processes; no recording restart when saved. Remote concurrency unchanged. [worklog](worklog/2026-09-29_02-22-20_admin-detection-settings.md).
 
 1.10.5 detection is local NAS only. No RemoteDetection client/poll/upload and no detection-remote.json loading in web/worker. Admin worker/readrate settings and historic results retained. Standalone MotionService remains installed but DVR never calls it. [worklog](worklog/2026-09-29_11-15-41_local-only-detection.md).
+
+1.10.6: VStarcam CGI ports can drift independently of RTSP. Discover current port via bounded UDP8600 unicast/subnet broadcast, validate sender/IP/UID, cache without camera DB revisions. State refreshes stale cache; PTZ/stop reuse it and never automatically replay movement after failure. [2026-09-29_15-30-01_camera-control-port-discovery.md](worklog/2026-09-29_15-30-01_camera-control-port-discovery.md).
