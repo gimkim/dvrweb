@@ -133,3 +133,5 @@
 - [2026-09-29_15-57-58_live-follow-received-frame-timing.md](2026-09-29_15-57-58_live-follow-received-frame-timing.md) — live WebRTC/fMP4 follow received timing instead of fixed15fps
 
 - [2026-09-29_21-08-36_android-image-recording-downloads.md](2026-09-29_21-08-36_android-image-recording-downloads.md) — Android native snapshot and authenticated clip saves
+
+- [2026-09-30_01-02-30_camera-native-detection-controls.md](2026-09-30_01-02-30_camera-native-detection-controls.md) — camera motion, human frame and tracking controls with readback

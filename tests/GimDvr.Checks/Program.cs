@@ -54,6 +54,23 @@ using(var canceled=new CancellationTokenSource())
     try { await portResolver.Resolve(loopCamera,canceled.Token); } catch(OperationCanceledException) { observed=true; }
     Check(observed,"resolver honors caller cancellation");
 }
+var frameState="var cmd=2126;var result=0;var sensitive=3;var bHumanoidFrame=1;";
+Check(CameraClient.FeatureWrite("humanFrame",0,frameState).EndsWith("sensitive=3&bHumanoidFrame=0"),"frame toggle preserves original sensitivity");
+Check(CameraClient.FeatureValue("tracking","var result=0;")==null,"HTTP success without feature is unsupported");
+Check(CameraClient.FeatureValue("tracking","var cmd=2126;var result=0;var enable=1;")==null,"different command cannot claim tracking capability");
+Reject(()=>CameraClient.FeatureWrite("tracking",2,""),"feature rejects nonbinary values");
+var featureFake=new FeatureCamera(store);var featureCam=new Camera{Id="feature-test"};
+featureFake.Responses.Enqueue("var cmd=2127;var result=0;var enable=1;");
+featureFake.Responses.Enqueue("var result=0;");
+featureFake.Responses.Enqueue("var cmd=2127;var result=0;var enable=0;");
+await featureFake.Control(featureCam,new("tracking",0),default);
+Check(featureFake.Requests.Count==3&&featureFake.Requests[1].Contains("command=0&enable=0"),"tracking control reads writes and verifies");
+featureFake.Responses.Enqueue(frameState);featureFake.Responses.Enqueue("var result=0;");featureFake.Responses.Enqueue(frameState);
+bool mismatch=false;try{await featureFake.Control(featureCam,new("humanFrame",0),default);}catch(InvalidOperationException){mismatch=true;}
+Check(mismatch,"acknowledgement alone cannot pass unchanged readback");
+featureFake.Responses.Enqueue("var result=-1;");var requestCount=featureFake.Requests.Count;
+bool unsupported=false;try{await featureFake.Control(featureCam,new("tracking",0),default);}catch(NotSupportedException){unsupported=true;}
+Check(unsupported&&featureFake.Requests.Count==requestCount+1,"unsupported probe never writes a guessed setting");
 Check(File.Exists(Path.Combine(paths.Data,"bootstrap.txt")),"bootstrap outside web root");
 var admin=store.Users().Single();
 Reject(()=>store.SaveUser(admin.Id,new("admin","viewer",true,null)),"cannot demote last admin");
@@ -216,4 +233,10 @@ sealed class Env(string root):IWebHostEnvironment
  public string EnvironmentName{get;set;}="Development";public string ApplicationName{get;set;}="Checks";
  public string WebRootPath{get;set;}=Path.Combine(root,"wwwroot");public IFileProvider WebRootFileProvider{get;set;}=new NullFileProvider();
  public string ContentRootPath{get;set;}=root;public IFileProvider ContentRootFileProvider{get;set;}=new NullFileProvider();
+}
+
+sealed class FeatureCamera(Store store):CameraClient(store)
+{
+ public readonly Queue<string> Responses=new();public readonly List<string> Requests=new();
+ public override Task<string> Get(Camera c,string path,CancellationToken ct){Requests.Add(path);return Task.FromResult(Responses.Dequeue());}
 }

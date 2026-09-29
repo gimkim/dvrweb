@@ -1,0 +1,11 @@
+# Camera-native motion / human frame / person tracking (1.10.8)
+
+User requests disabling camera-native features through GimDVR instead of vendor app. Read previous Eye4 protocol report and inspected local decompiled Native_CGI.java setters. Actual authenticated HTTP probes validate cmd2126/command1 returns sensitive,bHumanoidFrame; cmd2127/command1 returns enable,track_status on all three cameras. These are separate from old cmd2106 human alarm/PIR feature, and separate from NAS detection.
+
+Added capability-gated Human frame and Person tracking switches to existing controls/settings (shared web/Android). Read current state before write, preserve sensitivity when toggling human-frame, modify only target parameter, and verify target value after response. Motion also now uses read/write/readback. UI re-reads state after change and disables input while pending. Unsupported/malformed responses cannot enable a feature or generate a write. Optional frame/tracking read failures yield unsupported rather than blocking all PTZ controls. Dynamic HTTP port discovery continues to work after camera port changes.
+
+Authorized live action: disable requested three features on all cameras, changing only values that were1. Garage motion/frame/tracking already0. Front door tracking1->0, motion/frame already0. Side motion1->0 and tracking1->0, frame already0. All nine readbacks0. No temporary enabling, camera resets, password changes or NAS detection changes. Readbacks establish saved current settings, not reboot persistence or visually verified tracking behavior.
+
+Tests:78backend checks pass, including sensitivity preservation, unsupported schemas, invalid binary values, actual control orchestration read-write-read and rejecting acknowledged writes with unchanged readback. JS syntax check and git diff check pass. No real browser/device tests per user policy. Release web/worker builds and publication successful; existing deployment backup/hash/config-preservation procedure used. APK rebuild not required. Source notes/worklog pushed; credentials/vendor source/private probes excluded.
+
+Deployment verified: backup-detection-20260930-010136; published hashes match and production config preserved.

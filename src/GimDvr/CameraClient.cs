@@ -11,7 +11,7 @@ public partial class CameraClient(Store store)
     readonly CameraHttpPorts httpPorts = new();
     public string Rtsp(Camera c) => $"rtsp://{Uri.EscapeDataString(c.Username)}:{Uri.EscapeDataString(store.Password(c))}@{c.Host}:{c.RtspPort}{c.RtspPath}";
     HttpClient Client(Camera c) => new(new HttpClientHandler { Credentials = new NetworkCredential(c.Username, store.Password(c)), PreAuthenticate = true, AllowAutoRedirect = false, UseProxy = false }) { Timeout = TimeSpan.FromSeconds(8) };
-    public async Task<string> Get(Camera c,string path,CancellationToken ct)
+    public virtual async Task<string> Get(Camera c,string path,CancellationToken ct)
     {
         if(c.Driver!="vstarcam")throw new NotSupportedException("กล้อง RTSP นี้รองรับดูภาพและบันทึก; การควบคุมต้องใช้ไดรเวอร์ที่รองรับ");
         var port=await httpPorts.Resolve(c,ct,refreshExpired:path=="get_camera_params.cgi");
@@ -42,7 +42,9 @@ public partial class CameraClient(Store store)
         var alarm=Variables(await Get(c,"get_params.cgi",ct));
         string? human=null;
         try { var h=await Get(c,"trans_cmd_string.cgi?cmd=2106&command=3",ct);human=Extract(h,"HumanoidDetection"); } catch(InvalidOperationException){}
-        return new{supported=true,ptz=true,ir=camera.GetValueOrDefault("ircut"),microphone=camera.GetValueOrDefault("involume"),speaker=camera.GetValueOrDefault("outvolume"),motion=alarm.GetValueOrDefault("alarm_motion_armed"),motionSensitivity=alarm.GetValueOrDefault("alarm_motion_sensitivity"),human,humanSupported=human is not null,firmware=status.GetValueOrDefault("app_version"),talk="ตรวจช่องเสียงย้อนกลับเมื่อกดพูด"};
+        var frame=await OptionalFeature(c,"humanFrame",ct);
+        var tracking=await OptionalFeature(c,"tracking",ct);
+        return new{humanFrame=frame,tracking,humanFrameSupported=frame is not null,trackingSupported=tracking is not null,supported=true,ptz=true,ir=camera.GetValueOrDefault("ircut"),microphone=camera.GetValueOrDefault("involume"),speaker=camera.GetValueOrDefault("outvolume"),motion=alarm.GetValueOrDefault("alarm_motion_armed"),motionSensitivity=alarm.GetValueOrDefault("alarm_motion_sensitivity"),human,humanSupported=human is not null,firmware=status.GetValueOrDefault("app_version"),talk="ตรวจช่องเสียงย้อนกลับเมื่อกดพูด"};
     }
     static string? Extract(string text,string name)
     {
@@ -56,6 +58,7 @@ public partial class CameraClient(Store store)
         if(!await gate.WaitAsync(0,ct))throw new InvalidOperationException("กำลังส่งคำสั่งก่อนหน้า กรุณาลองใหม่");
         try
         {
+            if(input.Action is "motion" or "humanFrame" or "tracking"){await SetDetectionFeature(c,input,ct);return;}
             string command;
             if(input.Action is "up" or "down" or "left" or "right")
             {
@@ -79,7 +82,6 @@ public partial class CameraClient(Store store)
                 "ir" when input.Value is 0 or 1 =>$"camera_control.cgi?param=14&value={input.Value}",
                 "microphone" when input.Value is >=0 and <=31 =>$"camera_control.cgi?param=24&value={input.Value}",
                 "speaker" when input.Value is >=0 and <=31 =>$"camera_control.cgi?param=25&value={input.Value}",
-                "motion" when input.Value is 0 or 1 =>$"set_alarm.cgi?motion_armed={input.Value}",
                 "human" when input.Value is 0 or 1 =>await HumanCommand(c,input.Value,ct),
                 _=>throw new ArgumentException("คำสั่งหรือค่าไม่ถูกต้อง")
             };
