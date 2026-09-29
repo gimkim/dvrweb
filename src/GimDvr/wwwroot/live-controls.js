@@ -16,6 +16,7 @@ function saveLiveFrame(video,wrap){
  const link=document.createElement('a');link.href=canvas.toDataURL('image/jpeg',0.95);
  const camera=(video.id||'camera').replace(/^v-/,'').replace(/[^a-zA-Z0-9_-]/g,'_');
  link.download=`GimDVR-${camera}-${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;
+ if(window.GimDvrAndroid){try{if(typeof window.GimDvrAndroid.saveImage!=='function')throw Error('กรุณาอัปเดตแอพ GimDVR เป็น 1.0.2 เพื่อบันทึกภาพ');window.GimDvrAndroid.saveImage(link.href,link.download);}finally{canvas.width=canvas.height=0;}return;}
  link.hidden=true;wrap.appendChild(link);try{link.click();}finally{link.remove();canvas.width=canvas.height=0;}
 }
 function bindLiveControls(wrap){

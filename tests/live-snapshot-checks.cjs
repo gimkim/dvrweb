@@ -7,3 +7,11 @@ for(const transport of ['webrtc','fmp4']){video.dataset={transport};context.save
 assert.equal(clicked,2);assert.equal(removed,2);assert.equal(appended,2);console.log('PASS both live transports capture displayed video at native dimensions and clean download elements');
 assert.throws(()=>context.saveLiveFrame({...video,readyState:1},wrap));assert.equal(clicked,2);console.log('PASS no frame does not download a blank image');
 const app=fs.readFileSync('src/GimDvr/wwwroot/app.js','utf8');assert.match(app,/class="live-snapshot" data-live-snapshot/);console.log('PASS snapshot button is in shared overview/single video wrapper');
+// Native bridge must receive the JPEG rather than clicking a data URL in WebView.
+let nativeImage;
+context.window.GimDvrAndroid={saveImage(data,name){nativeImage={data,name};}};
+context.saveLiveFrame(video,wrap);
+assert.equal(nativeImage.data,'data:image/jpeg;base64,fixture');assert.match(nativeImage.name,/\.jpg$/);assert.equal(clicked,2);assert.equal(canvas.width,0);
+console.log('PASS Android snapshot uses native save bridge without anchor navigation');
+context.window.GimDvrAndroid={};assert.throws(()=>context.saveLiveFrame(video,wrap),/1\.0\.2/);assert.equal(canvas.width,0);
+console.log('PASS old APK reports required update instead of silently doing nothing');

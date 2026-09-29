@@ -10,7 +10,7 @@ namespace GimDvr.AndroidApp;
 
 [Activity(Label="GimDVR",MainLauncher=true,Exported=true,ScreenOrientation=ScreenOrientation.Portrait,
     ConfigurationChanges=ConfigChanges.Orientation|ConfigChanges.ScreenSize|ConfigChanges.KeyboardHidden)]
-public sealed class MainActivity:Activity
+public sealed partial class MainActivity:Activity
 {
     const string Server="https://gimgim.ddns.net/gimdvr/";
     WebView web=null!; bool fullScreen; bool paused;
@@ -23,10 +23,11 @@ public sealed class MainActivity:Activity
         // Always load the server-owned player; retain cookies and DOM storage for user state.
         s.CacheMode=CacheModes.NoCache;
         s.AllowFileAccess=false;s.AllowContentAccess=false;s.MixedContentMode=MixedContentHandling.NeverAllow;
-        s.UserAgentString+=" GimDvrAndroid/1.0.1";s.SetSupportMultipleWindows(false);
+        s.UserAgentString+=" GimDvrAndroid/1.0.2";s.SetSupportMultipleWindows(false);
         CookieManager.Instance?.SetAcceptCookie(true);CookieManager.Instance?.SetAcceptThirdPartyCookies(web,false);
         web.SetWebViewClient(new LockedClient(this));web.SetWebChromeClient(new WebChromeClient());
         web.AddJavascriptInterface(new Bridge(this),"GimDvrAndroid");
+        web.SetDownloadListener(new Downloads(this));
         web.LoadUrl(Server);
     }
     static bool Allowed(string? url)=>Uri.TryCreate(url,UriKind.Absolute,out var u)&&u.Scheme=="https"&&u.Host=="gimgim.ddns.net"&&u.Port==443&&(u.AbsolutePath=="/gimdvr"||u.AbsolutePath.StartsWith("/gimdvr/",StringComparison.Ordinal));
@@ -67,6 +68,8 @@ public sealed class MainActivity:Activity
     }
     sealed class Bridge(MainActivity activity):Java.Lang.Object
     {
+        [JavascriptInterface,Export("saveImage")]
+        public void SaveImage(string data,string name)=>activity.RunOnUiThread(()=>activity.SaveImage(data,name));
         [JavascriptInterface,Export("setFullscreen")]
         public void SetFullscreen(bool value)=>activity.RunOnUiThread(()=>{if(Allowed(activity.web.Url))activity.SetFullscreen(value);});
         [JavascriptInterface,Export("flushCookies")]

@@ -131,3 +131,5 @@
 - [2026-09-29_15-53-44_camera-input-resolution-diagnostics.md](2026-09-29_15-53-44_camera-input-resolution-diagnostics.md) — measured1080p input, recording gaps and stale15fps live clock
 
 - [2026-09-29_15-57-58_live-follow-received-frame-timing.md](2026-09-29_15-57-58_live-follow-received-frame-timing.md) — live WebRTC/fMP4 follow received timing instead of fixed15fps
+
+- [2026-09-29_21-08-36_android-image-recording-downloads.md](2026-09-29_21-08-36_android-image-recording-downloads.md) — Android native snapshot and authenticated clip saves
