@@ -46,19 +46,33 @@ var simultaneous=await Run(new[]{"-hide_banner","-loglevel","error","-i",source}
 await FragmentCache.Pump(new MemoryStream(simultaneous),Path.Combine(root,"mux-copy"));
 var recorded=Directory.GetFiles(muxRecord,"*.mp4").Single();var recordHashes=Hashes(await Run("-v","error","-i",recorded,"-map","0:v:0","-f","framemd5","-"));
 Check(File.Exists(Path.Combine(muxHls,"index.m3u8"))&&FragmentCache.ReadIndex(Path.Combine(root,"mux-copy"))!.Fragments.Length>=60&&recordHashes.SequenceEqual(original),"one FFmpeg input simultaneously preserves recording, snapshot HLS and short copy fragments");
-// Arrival timestamps can bunch several packets together, leaving MSE gaps.
-var jitterSource=Path.Combine(root,"jitter.ts");
-await Run("-v","error","-f","lavfi","-i","testsrc2=size=320x180:rate=15","-t","4","-c:v","libx264","-preset","veryfast","-bf","0","-g","30",jitterSource);
-var jittered=Path.Combine(root,"jittered.ts");
-await File.WriteAllBytesAsync(jittered,await Run("-v","error","-i",jitterSource,"-c:v","copy","-bsf:v","setts=ts=STARTPTS+floor(N/5)*5/(15*TB)+mod(N\\,5)/(1000*TB)","-f","mpegts","pipe:1"));
-var regular=Path.Combine(root,"regular.mp4");
-await File.WriteAllBytesAsync(regular,await Run(new[]{"-v","error","-i",jittered}.Concat(FragmentCache.Arguments(150,15)).ToArray()));
-var regularHashes=Hashes(await Run("-v","error","-i",regular,"-fps_mode","passthrough","-f","framemd5","-"));
-var jitterHashes=Hashes(await Run("-v","error","-i",jitterSource,"-fps_mode","passthrough","-f","framemd5","-"));
-Check(regularHashes.Length==60&&regularHashes.SequenceEqual(jitterHashes),"bursty timestamps regularized in fMP4 without losing or changing decoded frames");
-var frameData=Encoding.UTF8.GetString(await Run("-v","error","-i",regular,"-fps_mode","passthrough","-enc_time_base","1:90000","-f","framemd5","-"));
-var pts=frameData.Split('\n').Where(x=>x.Length>0&&!x.StartsWith('#')).Select(x=>long.Parse(x.Split(',')[2])).ToArray();
-Check(pts.Zip(pts.Skip(1),(a,b)=>b-a).All(d=>d==6000),"fMP4 frame timestamps remain continuous at15fps across fragment boundaries");
+// Preserve both steady and changing input cadence; no fixed 15fps rewrite.
+foreach(var rate in new[]{15,30,0})
+{
+ var timingSource=Path.Combine(root,$"timing-{rate}.ts");
+ var encode=new List<string>{"-v","error","-f","lavfi","-i",$"testsrc2=size=320x180:rate={(rate==0?30:rate)}","-t","4","-c:v","libx264","-preset","veryfast","-bf","0","-g","30"};
+ if(rate==0)encode.AddRange(new[]{"-bsf:v",@"setts=ts=STARTPTS+if(lt(N\,30)\,N/(15*TB)\,2/TB+(N-30)/(30*TB))"});
+ encode.Add(timingSource);await Run(encode.ToArray());
+ async Task<(long[] Pts,string[] Hash)> Frames(string file)
+ {
+  var text=Encoding.UTF8.GetString(await Run("-v","error","-i",file,"-fps_mode","passthrough","-enc_time_base","1:90000","-f","framemd5","-"));
+  var lines=text.Split('\n').Where(x=>x.Length>0&&!x.StartsWith('#')).Select(x=>x.Split(',')).ToArray();
+  return(lines.Select(x=>long.Parse(x[2])).ToArray(),lines.Select(x=>x[^1].Trim()).ToArray());
+ }
+ var before=await Frames(timingSource);
+ foreach(var transport in new[]{"fmp4","webrtc"})
+ {
+  var output=Path.Combine(root,$"timing-{rate}-{transport}."+(transport=="fmp4"?"mp4":"ts"));
+  var mux=transport=="fmp4"?FragmentCache.Arguments():MediaService.WebRtcRelayArguments(12345);
+  mux[^1]="pipe:1";
+  await File.WriteAllBytesAsync(output,await Run(new[]{"-v","error","-i",timingSource}.Concat(mux).ToArray()));
+  var after=await Frames(output);
+  Check(before.Hash.SequenceEqual(after.Hash),$"{transport} preserves every decoded frame for input cadence {rate}");
+  var a=before.Pts.Zip(before.Pts.Skip(1),(x,y)=>y-x).ToArray();
+  var b=after.Pts.Zip(after.Pts.Skip(1),(x,y)=>y-x).ToArray();
+  Check(a.Length==b.Length&&a.Zip(b,(x,y)=>Math.Abs(x-y)).All(d=>d<=2),$"{transport} preserves packet timing for input cadence {rate} (0=15 then30fps)");
+ }
+}
 // Publish through the real HTTP handler with isolated store/runtime fixtures (no listening server).
 var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{["Dvr:DataRoot"]=Path.Combine(root,"data"),["Dvr:MediaOwner"]="worker"}).Build();
 var paths=new Paths(config,new Env(root));var store=new Store(paths,DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(root,"keys"))));

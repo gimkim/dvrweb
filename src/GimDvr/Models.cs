@@ -59,7 +59,6 @@ public sealed class Paths(IConfiguration config, IWebHostEnvironment env)
     public string Manifests => Path.Combine(Data, "manifests");
     public string Runtime => Path.Combine(Data,"runtime");
     public bool ExternalMedia => config["Dvr:MediaOwner"]=="worker"&&!config.GetValue<bool>("Dvr:WorkerProcess");
-    public int WebRtcClockFps=>Math.Clamp(config.GetValue<int>("Dvr:WebRtcClockFps"),0,60);
     public bool ArrivalClock(string id)=>(config["Dvr:ArrivalClockCameraIds"]??"").Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).Contains(id,StringComparer.Ordinal);
     public string LiveEncoder => config["Dvr:LiveEncoder"]??"auto";
     public int LiveHeight => Math.Clamp(config.GetValue<int?>("Dvr:LiveHeight")??1080,360,2160)/2*2;

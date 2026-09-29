@@ -129,3 +129,5 @@
 - [2026-09-29_15-30-01_camera-control-port-discovery.md](2026-09-29_15-30-01_camera-control-port-discovery.md) — VStarcam dynamic HTTP port discovery restores control endpoint routing
 
 - [2026-09-29_15-53-44_camera-input-resolution-diagnostics.md](2026-09-29_15-53-44_camera-input-resolution-diagnostics.md) — measured1080p input, recording gaps and stale15fps live clock
+
+- [2026-09-29_15-57-58_live-follow-received-frame-timing.md](2026-09-29_15-57-58_live-follow-received-frame-timing.md) — live WebRTC/fMP4 follow received timing instead of fixed15fps
