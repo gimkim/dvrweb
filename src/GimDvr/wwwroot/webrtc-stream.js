@@ -2,13 +2,26 @@
 
 // Shared web/Android player: HEVC WebRTC only; never start a fallback transport.
 function startLiveStream(video,id,onStatus){
+ let stopped=false,active=null,retry=null,attempts=0;
+ function connect(){
+  if(stopped)return;
+  active=startWebRtcAttempt(video,id,status=>{if(stopped)return;if(status==='live')attempts=0;onStatus(status);},reason=>{
+   if(stopped||reason==='unsupported-hevc'||/^(offer-http-|lease-http-)(401|403)$/.test(reason))return;
+   const delay=Math.min(15000,3000*Math.pow(2,Math.min(attempts++,3)));
+   retry=setTimeout(()=>{retry=null;if(!stopped)connect();},delay);
+  });
+ }
+ connect();
+ return{destroy(){if(stopped)return;stopped=true;clearTimeout(retry);active?.destroy();active=null;}};
+}
+function startWebRtcAttempt(video,id,onStatus,onFailure){
  let stopped=false,failed=false,pc=null,session=null,timer=null,heartbeat=null,checking=false,lastFrameAt=Date.now(),lastFrames=0,frameRequest=null,firstFrameMs=null;
  const begin=Date.now();const trace=(stage,detail='')=>{video.dataset.rtcStage=stage;video.dataset.rtcElapsedMs=String(Date.now()-begin);video.dataset.rtcDetail=detail;console.info('[GimDVR WebRTC]',id,stage,Date.now()-begin,detail);};
  const controller=new AbortController();
  const endpoint='api/webrtc/';
  const release=token=>fetch(endpoint+encodeURIComponent(token),{method:'DELETE',headers:{'X-DVR-Request':'1'},keepalive:true}).catch(()=>{});
  function cleanup(){if(frameRequest!==null)video.cancelVideoFrameCallback?.(frameRequest);clearTimeout(timer);clearInterval(heartbeat);if(pc){pc.ontrack=pc.onconnectionstatechange=null;pc.close();pc=null;}video.srcObject=null;if(session){release(session);session=null;}}
- function failStream(reason='startup-timeout'){if(stopped||failed)return;failed=true;trace('error',String(reason));controller.abort();cleanup();video.dataset.transport='webrtc';video.dataset.starting='false';onStatus(reason==='unsupported-hevc'?'อุปกรณ์นี้ไม่รองรับ H.265 ผ่าน WebRTC':'เชื่อมต่อภาพสด H.265 ไม่สำเร็จ ปิดแล้วเปิดกล้องเพื่อลองใหม่');}
+ function failStream(reason='startup-timeout'){if(stopped||failed)return;failed=true;trace('error',String(reason));controller.abort();cleanup();video.dataset.transport='webrtc';video.dataset.starting='false';onStatus(reason==='unsupported-hevc'?'อุปกรณ์นี้ไม่รองรับ H.265 ผ่าน WebRTC':/^(offer-http-|lease-http-)(401|403)$/.test(reason)?'ไม่มีสิทธิ์ดูภาพสด กรุณาเข้าสู่ระบบใหม่':'กำลังเชื่อมต่อใหม่');onFailure(String(reason));}
  async function negotiate(){
   if(typeof RTCPeerConnection==='undefined'){failStream('unsupported-hevc');return;}
   try{
@@ -40,7 +53,7 @@ function startLiveStream(video,id,onStatus){
    heartbeat=setInterval(async()=>{
     if(checking||stopped||failed)return;checking=true;
     try{
-     const reply=await fetch(endpoint+encodeURIComponent(session),{method:'PUT',headers:{'X-DVR-Request':'1'},signal:controller.signal});if(!reply.ok)throw Error('WebRTC lease expired');
+     const reply=await fetch(endpoint+encodeURIComponent(session),{method:'PUT',headers:{'X-DVR-Request':'1'},signal:controller.signal});if(!reply.ok)throw Error('lease-http-'+reply.status);
      const stats=await peer.getStats();if(stopped||failed)return;let frames=0;stats.forEach(s=>{if(s.type==='inbound-rtp'&&(s.kind==='video'||s.mediaType==='video'))frames+=s.framesDecoded||0;});
      frames=Math.max(frames,video.getVideoPlaybackQuality?.().totalVideoFrames||0);
      const metrics={frames,firstFrameMs,at:Date.now(),state:peer.connectionState,jitterTargetMs:receiver.receiver?.jitterBufferTarget??null};
