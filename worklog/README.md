@@ -155,3 +155,5 @@
 - [2026-09-30_16-56-38_garage-h264-recovery.md](2026-09-30_16-56-38_garage-h264-recovery.md) — Garage H264 recovery and mixed-codec WebRTC support
 
 - [2026-09-30_17-08-16_disable-garage-reader.md](2026-09-30_17-08-16_disable-garage-reader.md) — Garage disabled; source reader stopped and verified
+
+- [2026-09-30_17-13-19_resume-garage-hevc.md](2026-09-30_17-13-19_resume-garage-hevc.md) — user-authorized Garage re-enable; HEVC source verified

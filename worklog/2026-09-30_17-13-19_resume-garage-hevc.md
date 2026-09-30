@@ -1,0 +1,7 @@
+# Resume Garage H.265 source
+
+User reports camera has returned and explicitly requests web/NAS pull H265 again, superseding temporary disable. No assumption that physical reset was performed. Backed up current Garage JSON privately, briefly offlined GimDVR and waited recorder lock release, set only Garage Enabled=true and incremented Revision, committed and checkpointed WAL successfully(0,0,0). Removed offline in finally. Recorder paths/credentials/retention/other camera configuration preserved. No source code, codec-setting command, SD write or binary deployment. App recycle briefly restarts all readers.
+
+First health request raced app_offline removal and received maintenance response; subsequent health returned1.11.0/ok. Garage reader PID10352/session20260930T101213-74893c5f running and recording. Fresh live TS ffprobe confirmed HEVC1920x1080,4.002622s chunk at17:12:38Bangkok. No additional RTSP probe/connection. Sustained/first completed MP4 evidence follows. No browser/device playback test or indefinite stability claim.
+
+Follow-up17:13:32: same PID10352 after~79seconds, no runtime error. First completed MP4 HEVC1920x1080/AAC,63.975s,2160974bytes; manifest63.952078s. Decode completed exit0. Default null-output timebase emitted non-monotonic DTS rounding warnings; repeated decode with passthrough and1:90000 output timebase yielded no errors. This confirms an actual completed first minute, not indefinite smoothness or browser playback.
