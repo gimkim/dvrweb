@@ -137,3 +137,5 @@
 - [2026-09-30_01-02-30_camera-native-detection-controls.md](2026-09-30_01-02-30_camera-native-detection-controls.md) — camera motion, human frame and tracking controls with readback
 
 - [2026-09-30_15-54-24_git-worklog-verification.md](2026-09-30_15-54-24_git-worklog-verification.md) — verify Git synchronization and worklog continuity
+
+- [2026-09-30_15-56-29_daily-recording-storage.md](2026-09-30_15-56-29_daily-recording-storage.md) — per-camera daily storage from latest24hours

@@ -1,0 +1,3 @@
+# Daily recording storage measurement
+
+Read-only NAS SQLite recordings catalogue sampled2026-09-30 15:56 Bangkok, previous24hours. Completed-file sizes: Garage1437files/8.378GB/23.927recorded hours; Front door1435files/9.358GB/23.818hours; Side1430files/13.133GB/23.732hours. Normalize to24recorded hours:8.404,9.430,13.281GB respectively; total31.115GB/day, approximately933.45GB/30days. DecimalGB=1e9bytes. Recorded coverage approximately98.9–99.7percent; spans nearly24wall hours. Actual catalogue total30.869GB. Estimates vary with motion, lighting, encoder bitrate and gaps; not multi-day averages. No camera access, browser tests, code/config change or deployment. Worklog only, committed and pushed.
