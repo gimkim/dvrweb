@@ -7,3 +7,5 @@ Fixed shared web/Android HEVC player: failed signaling, lost source/lease, and s
 Validation:12WebRTC code-fixture checks and5snapshot checks pass. Static webrtc-stream.js deployed and SHA256 matched; backup-webrtc-reconnect-20260930-164350. Existing asset hashes change automatically on page reload. No browser/device test. No APK rebuild needed. No backend binary change.
 
 Recorder heartbeat later remained stuck at09:43:08Z while WebRTC status continued. Performed app_offline recycle of GimDVR only: recorder lock released, offline removed in finally, health returned1.11.0/ok. This interrupts all camera readers briefly. Fresh heartbeat/source evidence to follow. Old diagnostic PID appeared in CIM but Stop-Process reported nonexistent; do not claim it was killed. Root cause of source timeout and stalled supervisor remains unproven; restart does not establish repair.
+
+Follow-up16:50:31Bangkok: recorder heartbeat fresh after recycle, but Garage restarted again(PID13364 to2816); finalized post-recycle clip20.310111s. Supervisor recovery confirmed, stable camera stream NOT confirmed.
