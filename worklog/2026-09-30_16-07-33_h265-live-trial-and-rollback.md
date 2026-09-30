@@ -1,0 +1,9 @@
+# Real H.265 camera / recorder / detector trial and rollback
+
+User authorizes real stream trial and switching if usable, including background detection. Inspected Eye4 setter cmd2105 command2 videoFormat1=H265/0=H264 (camera reboot). Garage original format0. Temporarily switched only Garage, captured12seconds RTSP video-copy MP4: ffprobe hevc Main1920x1080,no B frames,duration11.966667,1772150bytes. No claim of storage savings from this short sample.
+
+Actual production NAS also recorded HEVC. Recording66e1aeccfe1187cac400fcc810311b88ded11337823e4d988ef3c95e6b1d3494 detection completed on first attempt: GPU,d3d11va,125sampled frames,13human samples,motion=true,human=false,error=null. Local CPU detector on12second trial also complete,24frames,3human samples. This validates decoding/inference operation, not detection accuracy or sustained capacity.
+
+Full switch criterion NOT met: actual FragmentCache.CompleteInitialization on remuxed HEVC trial fails Missing avcC; JavaScript codec parser is also AVC-only. MediaMTX documentation warns HEVC WebRTC support depends on browser/hardware. Therefore did not leave production in a known unsupported state or switch remaining cameras. Restored Garage videoFormat0, verified readback0 and newly completed H264 recording at2026-09-30T09:05:42Z. Camera reboot changes HTTP port and briefly interrupts streams; restoration initially required renewed discovery after reboot. Other two cameras untouched. Trial HEVC recordings remain; do not delete originals.
+
+No app code change/deployment or browser tests. Private camera samples/probes ignored. Worklog only committed/pushed. Remaining work before migration: HEVC initialization/MSE codec handling and playback compatibility policy for both live and recordings, with suitable fallback for clients lacking HEVC. Reference https://mediamtx.org/docs/features/webrtc-specific-features .

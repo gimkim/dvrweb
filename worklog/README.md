@@ -141,3 +141,5 @@
 - [2026-09-30_15-56-29_daily-recording-storage.md](2026-09-30_15-56-29_daily-recording-storage.md) — per-camera daily storage from latest24hours
 
 - [2026-09-30_15-59-27_camera-h265-capability-check.md](2026-09-30_15-59-27_camera-h265-capability-check.md) — all three advertise H.264/H.265 switching; current stream H.264
+
+- [2026-09-30_16-07-33_h265-live-trial-and-rollback.md](2026-09-30_16-07-33_h265-live-trial-and-rollback.md) — actual HEVC recording/detection pass, playback pipeline fails; restored H264
