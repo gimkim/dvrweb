@@ -139,3 +139,5 @@
 - [2026-09-30_15-54-24_git-worklog-verification.md](2026-09-30_15-54-24_git-worklog-verification.md) — verify Git synchronization and worklog continuity
 
 - [2026-09-30_15-56-29_daily-recording-storage.md](2026-09-30_15-56-29_daily-recording-storage.md) — per-camera daily storage from latest24hours
+
+- [2026-09-30_15-59-27_camera-h265-capability-check.md](2026-09-30_15-59-27_camera-h265-capability-check.md) — all three advertise H.264/H.265 switching; current stream H.264

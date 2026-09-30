@@ -1,0 +1,3 @@
+# Camera H.265 capability check
+
+User asks whether installed cameras support H.265. Read-only authenticated get_status.cgi/get_camera_params.cgi on all three reports app_version EN185.53.111.21 and support_h264_h265_shift=1. Prior local Eye4 decompilation consumes the same capability flag. ffprobe of latest completed recording per camera confirms current main stream is H.2641920x1080 for all three. Evidence supports firmware-advertised H.264/H.265 switching capability, but no switch or actual HEVC RTSP sample was attempted. Need test live WebRTC/fMP4 and clients before deploying a codec change; do not imply current browser pipeline is verified for HEVC. No camera/config/source changes or deployment. Worklog committed/pushed.
