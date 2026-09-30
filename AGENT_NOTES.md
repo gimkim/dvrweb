@@ -177,3 +177,5 @@ User explicitly permits Garage rollback toH264 for fault isolation; other camera
 Garage explicitly disabled by user before physical reset: no live/recording source pulls; do not re-enable automatically. Other cameras remain enabled. [Stop verification](worklog/2026-09-30_17-08-16_disable-garage-reader.md).
 
 User explicitly re-enabled Garage source after temporary stop; fresh NAS TS verifiedHEVC1080p. This supersedes disabled state above; no camera codec write needed. [Resume](worklog/2026-09-30_17-13-19_resume-garage-hevc.md).
+
+SQLite incident: NEVER open live NAS SQLite over SMB, even for diagnostics; WAL shared-memory/locking across hosts is unsafe. Use NAS-local code/API; for repair stop owner and work on closed hash-verified offline copy, preserve original/journals. Search500 fixed by rebuilding catalog, all8502recordings retained and20invalid detection results queued again. [Repair](worklog/2026-09-30_17-20-28_repair-recording-search-catalog.md).

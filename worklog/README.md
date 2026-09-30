@@ -157,3 +157,5 @@
 - [2026-09-30_17-08-16_disable-garage-reader.md](2026-09-30_17-08-16_disable-garage-reader.md) — Garage disabled; source reader stopped and verified
 
 - [2026-09-30_17-13-19_resume-garage-hevc.md](2026-09-30_17-13-19_resume-garage-hevc.md) — user-authorized Garage re-enable; HEVC source verified
+
+- [2026-09-30_17-20-28_repair-recording-search-catalog.md](2026-09-30_17-20-28_repair-recording-search-catalog.md) — rebuild corrupt catalog; recording search functional checks pass
