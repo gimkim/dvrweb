@@ -1,12 +1,12 @@
 'use strict';
 
-// Shared web/Android player: HEVC WebRTC only; never start a fallback transport.
+// Shared web/Android player: H.265/H.264 WebRTC only; never start a fallback transport.
 function startLiveStream(video,id,onStatus){
  let stopped=false,active=null,retry=null,attempts=0;
  function connect(){
   if(stopped)return;
   active=startWebRtcAttempt(video,id,status=>{if(stopped)return;if(status==='live')attempts=0;onStatus(status);},reason=>{
-   if(stopped||reason==='unsupported-hevc'||/^(offer-http-|lease-http-)(401|403)$/.test(reason))return;
+   if(stopped||reason==='unsupported-codec'||/^(offer-http-|lease-http-)(401|403)$/.test(reason))return;
    const delay=Math.min(15000,3000*Math.pow(2,Math.min(attempts++,3)));
    retry=setTimeout(()=>{retry=null;if(!stopped)connect();},delay);
   });
@@ -21,17 +21,17 @@ function startWebRtcAttempt(video,id,onStatus,onFailure){
  const endpoint='api/webrtc/';
  const release=token=>fetch(endpoint+encodeURIComponent(token),{method:'DELETE',headers:{'X-DVR-Request':'1'},keepalive:true}).catch(()=>{});
  function cleanup(){if(frameRequest!==null)video.cancelVideoFrameCallback?.(frameRequest);clearTimeout(timer);clearInterval(heartbeat);if(pc){pc.ontrack=pc.onconnectionstatechange=null;pc.close();pc=null;}video.srcObject=null;if(session){release(session);session=null;}}
- function failStream(reason='startup-timeout'){if(stopped||failed)return;failed=true;trace('error',String(reason));controller.abort();cleanup();video.dataset.transport='webrtc';video.dataset.starting='false';onStatus(reason==='unsupported-hevc'?'อุปกรณ์นี้ไม่รองรับ H.265 ผ่าน WebRTC':/^(offer-http-|lease-http-)(401|403)$/.test(reason)?'ไม่มีสิทธิ์ดูภาพสด กรุณาเข้าสู่ระบบใหม่':'กำลังเชื่อมต่อใหม่');onFailure(String(reason));}
+ function failStream(reason='startup-timeout'){if(stopped||failed)return;failed=true;trace('error',String(reason));controller.abort();cleanup();video.dataset.transport='webrtc';video.dataset.starting='false';onStatus(reason==='unsupported-codec'?'อุปกรณ์นี้ไม่รองรับวิดีโอผ่าน WebRTC':/^(offer-http-|lease-http-)(401|403)$/.test(reason)?'ไม่มีสิทธิ์ดูภาพสด กรุณาเข้าสู่ระบบใหม่':'กำลังเชื่อมต่อใหม่');onFailure(String(reason));}
  async function negotiate(){
-  if(typeof RTCPeerConnection==='undefined'){failStream('unsupported-hevc');return;}
+  if(typeof RTCPeerConnection==='undefined'){failStream('unsupported-codec');return;}
   try{
    pc=new RTCPeerConnection({iceServers:[],bundlePolicy:'max-bundle'});
    const peer=pc,receiver=peer.addTransceiver('video',{direction:'recvonly'});
    // Camera packets arrive in bursts; this is a browser hint, not a hard latency cap.
    try{if('jitterBufferTarget' in receiver.receiver)receiver.receiver.jitterBufferTarget=400;}catch{}
    const codecs=typeof RTCRtpReceiver!=='undefined'?RTCRtpReceiver.getCapabilities('video')?.codecs:null;
-   if(!codecs||!receiver.setCodecPreferences){failStream('unsupported-hevc');return;}
-   if(codecs&&receiver.setCodecPreferences){const hevc=codecs.filter(c=>c.mimeType.toLowerCase()==='video/h265');if(!hevc.length){failStream('unsupported-hevc');return;}receiver.setCodecPreferences(hevc);}
+   if(!codecs||!receiver.setCodecPreferences){failStream('unsupported-codec');return;}
+   if(codecs&&receiver.setCodecPreferences){const compatible=codecs.filter(c=>['video/h265','video/h264'].includes(c.mimeType.toLowerCase())).sort((a,b)=>Number(b.mimeType.toLowerCase()==='video/h265')-Number(a.mimeType.toLowerCase()==='video/h265'));if(!compatible.length){failStream('unsupported-codec');return;}receiver.setCodecPreferences(compatible);}
    video.muted=true;video.playbackRate=1;video.dataset.transport='webrtc';
    peer.ontrack=e=>{if(stopped||failed)return;video.srcObject=new MediaStream([e.track]);frameRequest=video.requestVideoFrameCallback?.(()=>{if(stopped||failed)return;firstFrameMs=Date.now()-begin;lastFrameAt=Date.now();clearTimeout(timer);trace('first-frame');});video.play().catch(()=>{});};
    peer.onconnectionstatechange=()=>{trace('peer',peer.connectionState);if(peer.connectionState==='connected'){clearTimeout(timer);timer=setTimeout(()=>failStream('no-decoded-frames'),10000);}if(peer.connectionState==='failed'||peer.connectionState==='closed')failStream('peer-'+peer.connectionState);};

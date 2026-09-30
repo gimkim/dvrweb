@@ -151,3 +151,5 @@
 - [2026-09-30_16-49-49_garage-source-timeouts-webrtc-recovery.md](2026-09-30_16-49-49_garage-source-timeouts-webrtc-recovery.md) — Garage source timeouts and automatic HEVC reconnection
 
 - [2026-09-30_16-49-49_garage-sd-disable-attempt.md](2026-09-30_16-49-49_garage-sd-disable-attempt.md) — SD recording disable attempt blocked by camera control timeouts
+
+- [2026-09-30_16-56-38_garage-h264-recovery.md](2026-09-30_16-56-38_garage-h264-recovery.md) — Garage H264 recovery and mixed-codec WebRTC support
