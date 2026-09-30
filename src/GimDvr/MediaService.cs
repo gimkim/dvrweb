@@ -97,7 +97,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
                     {
                         var current=configured.Find(c=>c.Id==pair.Key);
                         var wanted=current is not null&&current.Enabled&&(current.RecordingEnabled||LastAnyWatch(current.Id)>DateTimeOffset.UtcNow.AddSeconds(-8));
-                        if(!wanted||current!.Revision!=pair.Value.Camera.Revision||pair.Value.Process.HasExited||pair.Value.SegmentMs!=segmentMs)
+                        if(!wanted||current!.Revision!=pair.Value.Camera.Revision||pair.Value.Process.HasExited)
                         {await Stop(pair.Key);retryAfter[pair.Key]=DateTimeOffset.UtcNow.AddSeconds(3);}
                     }
                     foreach(var c in configured.Where(c=>c.Enabled&&(c.RecordingEnabled||LastAnyWatch(c.Id)>DateTimeOffset.UtcNow.AddSeconds(-8))))
@@ -134,7 +134,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         var rtcPort=((System.Net.IPEndPoint)rtcSocket.Client.LocalEndPoint!).Port;rtcSocket.Close();
         Add(WebRtcRelayArguments(rtcPort));
         Add(OverviewArguments(live));
-        var segmentMs=store.StreamSettings().SegmentMs;Add(FragmentCache.Arguments(segmentMs));
+        var segmentMs=0; // No fMP4 output; shared reader relays HEVC unchanged.
         Manifest? manifest=null;
         if(c.RecordingEnabled)
         {
@@ -152,7 +152,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
         if(!process.Start())throw new InvalidOperationException("เริ่ม FFmpeg ไม่สำเร็จ");
         IDisposable? job=null;
         try{job=ProcessJob.Attach(process);process.BeginErrorReadLine();var run=new Run(c,process,live,manifest,job){WebRtcPort=rtcPort,SegmentMs=segmentMs,RelayPort=relayPort};runs[c.Id]=run;
-            run.FragmentPump=Task.Run(async()=>{try{await FragmentCache.Pump(process.StandardOutput.BaseStream,Path.Combine(live,"fragments"));}catch(Exception e){log.LogWarning("Copy fragment cache {Id}: {Error}",c.Id,Sanitize(e.Message,c));try{await process.StandardOutput.BaseStream.CopyToAsync(Stream.Null);}catch(IOException){}}});errors.TryRemove(c.Id,out _);}
+            run.FragmentPump=process.StandardOutput.BaseStream.CopyToAsync(Stream.Null);errors.TryRemove(c.Id,out _);}
         catch{process.Kill(true);process.Dispose();job?.Dispose();throw;}
     }
     // Overview is a video-only remux: no decoder, scaling or video encoder.

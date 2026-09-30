@@ -65,7 +65,7 @@ public sealed class WebRtcService(Store store,MediaService media,Paths paths,ILo
     async Task Close(string id,Session s){if(!await Delete(s.Upstream)){ready=false;try{gateway?.Kill(true);}catch(InvalidOperationException){}return;}if(sessions.TryRemove(id,out _)){slots.Release();log.LogInformation("WebRTC session closed; active={Count}",sessions.Count);}}
     protected override async Task ExecuteAsync(CancellationToken ct){
         var exe=Path.Combine(Path.GetDirectoryName(paths.Ffmpeg)??"","mediamtx.exe");
-        if(!File.Exists(exe)){log.LogWarning("WebRTC gateway binary missing; copy fallback remains available");return;}
+        if(!File.Exists(exe)){log.LogWarning("WebRTC gateway binary missing; live playback unavailable");return;}
         Directory.CreateDirectory(paths.Runtime);var config=Path.Combine(paths.Runtime,"mediamtx.json");
         await File.WriteAllTextAsync(config,JsonSerializer.Serialize(new{
             logLevel="warn",logDestinations=new[]{"stdout"},udpReadBufferSize=4194304,writeQueueSize=2048,api=true,apiAddress="127.0.0.1:19997",rtsp=false,rtmp=false,hls=false,srt=false,moq=false,

@@ -110,6 +110,19 @@ if(File.Exists(Path.Combine(privateFixture,"key.m4s"))){
  Check(fixedInit.Length>cameraInit.Length&&Hashes(await Run("-v","error","-i",target,"-map","0:v:0","-f","framemd5","-")).Length>0,"captured camera cache with empty avcC repaired and decoded locally");
  await File.WriteAllBytesAsync(Path.Combine(privateFixture,"fixed-init.mp4"),fixedInit);
 }
+// Current production HEVC relay and recording preserve the encoded camera video.
+var hevcSource=Path.Combine(root,"hevc.mp4");
+await Run("-v","error","-f","lavfi","-i","testsrc2=size=320x180:rate=15","-t","3","-c:v","libx265","-preset","ultrafast","-x265-params","log-level=error:bframes=0:keyint=15",hevcSource);
+var hevcRelayArgs=MediaService.WebRtcRelayArguments(12345);hevcRelayArgs[^1]="pipe:1";
+var hevcRelay=Path.Combine(root,"hevc-relay.ts");await File.WriteAllBytesAsync(hevcRelay,await Run(new[]{"-v","error","-i",hevcSource}.Concat(hevcRelayArgs).ToArray()));
+var hevcFrames=Hashes(await Run("-v","error","-i",hevcSource,"-fps_mode","passthrough","-f","framemd5","-"));
+var relayFrames=Hashes(await Run("-v","error","-i",hevcRelay,"-fps_mode","passthrough","-f","framemd5","-"));
+Check(hevcFrames.SequenceEqual(relayFrames),"HEVC WebRTC relay preserves every decoded frame without video encoding");
+var hevcFolder=Path.Combine(root,"hevc-record");Directory.CreateDirectory(hevcFolder);
+await Run(new[]{"-v","error","-i",hevcRelay}.Concat(MediaService.RecordingArguments(Path.Combine(hevcFolder,"segments.csv"),hevcFolder)).ToArray());
+var hevcRecorded=Directory.GetFiles(hevcFolder,"*.mp4").Single();
+var recordedFrames=Hashes(await Run("-v","error","-i",hevcRecorded,"-fps_mode","passthrough","-f","framemd5","-"));
+Check(hevcFrames.SequenceEqual(recordedFrames),"HEVC recording preserves every decoded frame without video encoding");
 Console.WriteLine($"{passed} stream checks passed. Evidence: {root}");
 sealed class GatedStream(byte[] bytes,int cut):MemoryStream(bytes)
 {

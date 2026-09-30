@@ -1,5 +1,7 @@
 # GimDVR
 
+Current1.11.0: all deployed cameras send H.265; live uses HEVC WebRTC only, without fMP4 fallback or video transcoding. Unsupported clients receive an error. Old H.264 recordings remain playable where supported. Historical fallback-buffer settings below are superseded.
+
 Live settings1.9.1: defaults150ms fMP4 fragments and300ms startup/rebuffer/live target. Admin can change each value in ระบบและกิจกรรม → ภาพสด · Buffer; SQLite persists settings for web and Android. Changing fragment duration restarts shared readers and may briefly interrupt recording; changing only buffers reconnects viewers. Historical100/200ms values below are superseded.
 
 Remote analysis1.9.0: [MotionService setup and operation](docs/motion-service.md). NAS polls the authenticated HTTPS service every15seconds, prefers NVIDIA CUDA/CPU remote processing when ready, and falls back to NAS OpenVINO on failure. Recording, retention and SQLite stay on NAS.

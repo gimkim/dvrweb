@@ -94,7 +94,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.10.8"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.11.0"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -149,11 +149,7 @@ app.MapPost("/api/cameras/{id}/webrtc",async(string id,WebRtcOffer offer,Store s
 }).RequireAuthorization().WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(131072));
 app.MapPut("/api/webrtc/{id}",(string id,WebRtcService rtc,HttpContext ctx)=>rtc.Touch(id,ctx.User)?Results.NoContent():Results.NotFound()).RequireAuthorization();
 app.MapDelete("/api/webrtc/{id}",async(string id,WebRtcService rtc,HttpContext ctx)=>{await rtc.CloseOwned(id,ctx.User);return Results.NoContent();}).RequireAuthorization();
-app.MapGet("/api/cameras/{id}/copy-stream",async(string id,Store s,MediaService media,HttpContext ctx)=>
-{
-    var camera=s.Camera(id);if(!camera.Enabled){ctx.Response.StatusCode=404;return;}
-    await media.CopyStream(camera,ctx);
-}).RequireAuthorization();
+app.MapGet("/api/cameras/{id}/copy-stream",()=>Results.StatusCode(410)).RequireAuthorization();
 app.MapGet("/api/live/{id}/{name}",(string id,string name,Store s,MediaService media,HttpContext ctx)=>
 {
     ctx.Response.Headers.CacheControl="no-store";
