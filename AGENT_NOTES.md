@@ -173,3 +173,5 @@ APK1.0.2/versionCode3 adds native save picker: bounded JPEG bridge and same-orig
 HEVC player now retries transient source/signaling/lease failures with bounded backoff, releasing every old peer/session. Unsupported codec and401/403 remain terminal; destroy stops retries. No fallback or transcoding. Source Garage outages remain separately unresolved. [2026-09-30_16-49-49_garage-source-timeouts-webrtc-recovery.md](worklog/2026-09-30_16-49-49_garage-source-timeouts-webrtc-recovery.md).
 
 User explicitly permits Garage rollback toH264 for fault isolation; other cameras stayHEVC. Shared player offers H265/H264 without transcoding/fMP4; actual Garage change requires acknowledgement and source verification. [Recovery](worklog/2026-09-30_16-56-38_garage-h264-recovery.md).
+
+Garage explicitly disabled by user before physical reset: no live/recording source pulls; do not re-enable automatically. Other cameras remain enabled. [Stop verification](worklog/2026-09-30_17-08-16_disable-garage-reader.md).

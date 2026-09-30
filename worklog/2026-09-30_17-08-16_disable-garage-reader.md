@@ -1,0 +1,5 @@
+# Disable Garage source reader
+
+User explicitly requests stopping web/NAS stream pulls for Garage while considering physical reset. Set Garage Enabled=false, preserving RecordingEnabled/path/credentials and all recordings. Initial live SQLite update was visible to diagnostic read but did not stop running reader. Recycled GimDVR using app_offline, waited recorder lock release, reapplied Garage disabled while offline, committed and checkpointed WAL successfully(0,0,0), removed offline in finally and checked health. Brief interruption to other readers was disclosed.
+
+Verification2026-09-30T10:08:01Z: Garage Running=false,Recording=false,ProcessId=null,WebRtcPort=null. Front door and Side Running=true,Recording=true with fresh reader processes. This confirms Garage source pull stopped. No camera commands, SD writes, codec changes, source-code changes or binary deployment. Do not automatically re-enable Garage; await user request. Original JSON backed up in ignored artifacts. No browser/device tests.
