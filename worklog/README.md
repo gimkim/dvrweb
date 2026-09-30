@@ -145,3 +145,5 @@
 - [2026-09-30_16-07-33_h265-live-trial-and-rollback.md](2026-09-30_16-07-33_h265-live-trial-and-rollback.md) — actual HEVC recording/detection pass, playback pipeline fails; restored H264
 
 - [2026-09-30_16-22-59_hevc-webrtc-only.md](2026-09-30_16-22-59_hevc-webrtc-only.md) — all cameras HEVC; WebRTC only and no fMP4 fallback
+
+- [2026-09-30_16-31-14_garage-restart-diagnostics.md](2026-09-30_16-31-14_garage-restart-diagnostics.md) — reboot Garage, reconnect its reader and report camera addresses

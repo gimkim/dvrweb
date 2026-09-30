@@ -1,0 +1,9 @@
+# Garage restart and MAC mapping
+
+User authorizes restarting Garage if needed because live stream absent after HEVC switch. Found repeated short recordings and reader restarts, with HTTP query timeouts; do not infer a confirmed root cause. Authenticated reboot.cgi eventually returned result=ok at approximately16:27:55Bangkok. Temporary probe build hit locked artifacts; rebuilt into separate ignored output, no production binaries changed. After reboot, direct8second RTSP sample copied successfully, ffprobeHEVC1920x1080,duration8s,size204464bytes. This confirms source output for a short sample, not sustained smoothness.
+
+NAS existing reader still lacked new finalized recordings after camera reboot. Requested targeted Garage reader restart by incrementing only its SQLite camera Revision to6, preserving full original JSON in ignored artifacts before mutation. Other camera config and readers untouched; no web/service restart or codec rollback. New Garage reader PID6148/session093039 started and began producing local HLS artifacts. Follow-up final recording evidence appended below. No real browser/device test, no app code deployment.
+
+User also asked camera addresses: from supplied AP screenshots Garage192.168.1.36 / D4-8A-3B-66-78-83; Front door192.168.1.37 / D4-8A-3B-66-7C-6A; Side192.168.1.38 / D4-8A-3B-66-7B-93. MAC mapping not freshly queried from AP. Private probe/sample/backup ignored. Worklog committed/pushed.
+
+Follow-up16:32:44: short recovery did NOT persist. Reader PID changed again to9604; latest catalogued completed recording still09:25:10Z. New HLS chunks were observed every4s for20s after reconnect, but no newly finalized recording was confirmed. Reboot/reconnect therefore did not establish a stable fix. Keep HEVC per user's explicit request; no automatic rollback. User-visible playback not verified.
