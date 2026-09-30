@@ -135,3 +135,5 @@
 - [2026-09-29_21-08-36_android-image-recording-downloads.md](2026-09-29_21-08-36_android-image-recording-downloads.md) — Android native snapshot and authenticated clip saves
 
 - [2026-09-30_01-02-30_camera-native-detection-controls.md](2026-09-30_01-02-30_camera-native-detection-controls.md) — camera motion, human frame and tracking controls with readback
+
+- [2026-09-30_15-54-24_git-worklog-verification.md](2026-09-30_15-54-24_git-worklog-verification.md) — verify Git synchronization and worklog continuity
