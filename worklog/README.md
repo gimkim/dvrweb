@@ -159,3 +159,5 @@
 - [2026-09-30_17-13-19_resume-garage-hevc.md](2026-09-30_17-13-19_resume-garage-hevc.md) — user-authorized Garage re-enable; HEVC source verified
 
 - [2026-09-30_17-20-28_repair-recording-search-catalog.md](2026-09-30_17-20-28_repair-recording-search-catalog.md) — rebuild corrupt catalog; recording search functional checks pass
+
+- [2026-09-30_17-43-50_hevc-recording-storage.md](2026-09-30_17-43-50_hevc-recording-storage.md) — HEVC actual file sizes and short-sample daily estimates
