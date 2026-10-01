@@ -8,7 +8,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace GimDvr;
 
-public sealed partial class MediaService(Store store,CameraClient cameras,Paths paths,ILogger<MediaService> log) : BackgroundService
+public sealed partial class MediaService(Store store,CameraClient cameras,Paths paths,ILogger<MediaService> log,CameraNetworkDiscovery? network=null) : BackgroundService
 {
     readonly ConcurrentDictionary<string, DateTimeOffset> watchers=new();
     readonly ConcurrentDictionary<string, Run> runs=new();
@@ -103,7 +103,7 @@ public sealed partial class MediaService(Store store,CameraClient cameras,Paths 
                     foreach(var c in configured.Where(c=>c.Enabled&&(c.RecordingEnabled||LastAnyWatch(c.Id)>DateTimeOffset.UtcNow.AddSeconds(-8))))
                     {
                         if(runs.ContainsKey(c.Id)||retryAfter.GetValueOrDefault(c.Id)>DateTimeOffset.UtcNow)continue;
-                        try{Start(c);}
+                        try{var resolved=network is null?c:await network.Resolve(c,stoppingToken);if(resolved.Enabled)Start(resolved);}
                         catch(Exception e){errors[c.Id]=Sanitize(e.Message,c);retryAfter[c.Id]=DateTimeOffset.UtcNow.AddSeconds(15);log.LogWarning("Cannot start camera {Id}: {Error}",c.Id,errors[c.Id]);}
                     }
                     foreach(var run in runs.Values)await UpdateEncoder(run);

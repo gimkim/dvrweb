@@ -61,6 +61,16 @@ public sealed partial class Store
         return result;
     }
     public Camera Camera(string id) => Cameras().Find(x => x.Id == id) ?? throw new KeyNotFoundException("ไม่พบกล้อง");
+    public Camera UpdateCameraNetwork(Camera expected,string host,int port)
+    {
+        lock(gate)
+        {
+            var current=Camera(expected.Id);
+            if(current.Revision!=expected.Revision||current.Host!=expected.Host||current.MacAddress!=expected.MacAddress||!current.Enabled)return current;
+            if(current.Host==host&&current.HttpPort==port)return current;
+            return SaveCamera(current with{Host=host,HttpPort=port},null);
+        }
+    }
     public Camera SaveCamera(Camera camera, string? password)
     {
         lock (gate)

@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace GimDvr;
 
-public partial class CameraClient(Store store)
+public partial class CameraClient(Store store,CameraNetworkDiscovery? network=null)
 {
     readonly ConcurrentDictionary<string, SemaphoreSlim> controls = new();
     readonly CameraHttpPorts httpPorts = new();
@@ -14,14 +14,15 @@ public partial class CameraClient(Store store)
     public virtual async Task<string> Get(Camera c,string path,CancellationToken ct)
     {
         if(c.Driver!="vstarcam")throw new NotSupportedException("กล้อง RTSP นี้รองรับดูภาพและบันทึก; การควบคุมต้องใช้ไดรเวอร์ที่รองรับ");
+        if(network is not null)c=await network.Resolve(c,ct);
         var port=await httpPorts.Resolve(c,ct,refreshExpired:path=="get_camera_params.cgi");
         using var client=Client(c);
         // Older VStarcam CGI additionally requires these parameters after HTTP authentication.
         var uri=$"http://{c.Host}:{port}/{path}{(path.Contains('?')?'&':'?')}loginuse={Uri.EscapeDataString(c.Username)}&loginpas={Uri.EscapeDataString(store.Password(c))}";
         HttpResponseMessage response;
         try { response=await client.GetAsync(uri,ct); }
-        catch(HttpRequestException) { httpPorts.Invalidate(c); throw; }
-        catch(OperationCanceledException) { httpPorts.Invalidate(c); throw; }
+        catch(HttpRequestException) { httpPorts.Invalidate(c);network?.Invalidate(c); throw; }
+        catch(OperationCanceledException) { httpPorts.Invalidate(c);network?.Invalidate(c); throw; }
         using var responseScope=response;
         if(!response.IsSuccessStatusCode)throw new InvalidOperationException($"กล้องตอบ HTTP {(int)response.StatusCode}");
         return await response.Content.ReadAsStringAsync(ct);

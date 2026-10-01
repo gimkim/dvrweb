@@ -15,6 +15,7 @@ public sealed record Camera
     public string Username { get; set; } = "admin";
     public string Secret { get; set; } = "";
     public string? Uid { get; set; }
+    public string? MacAddress { get; set; }
     public bool Enabled { get; set; } = true;
     public bool RecordingEnabled { get; set; }
     public string RecordingRoot { get; set; } = "";
@@ -39,6 +40,8 @@ public sealed record Camera
         if (RecordingEnabled && string.IsNullOrWhiteSpace(RecordingRoot)) throw new ArgumentException("ตั้งโฟลเดอร์บันทึกก่อนเปิดการบันทึก");
         if (RecordingRoot.Length > 0 && !Path.IsPathFullyQualified(RecordingRoot)) throw new ArgumentException("ใช้ path เต็มบนเซิร์ฟเวอร์หรือ UNC");
         if (Username.Length > 100 || Uid?.Length > 100) throw new ArgumentException("ข้อมูลกล้องยาวเกินกำหนด");
+        if (!string.IsNullOrWhiteSpace(MacAddress) && CameraNetworkDiscovery.NormalizeMac(MacAddress) is null)
+            throw new ArgumentException("MAC address ไม่ถูกต้อง");
     }
 }
 public sealed record CameraInput(Camera Camera, string? Password);

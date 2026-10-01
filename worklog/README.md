@@ -163,3 +163,5 @@
 - [2026-09-30_17-43-50_hevc-recording-storage.md](2026-09-30_17-43-50_hevc-recording-storage.md) — HEVC actual file sizes and short-sample daily estimates
 
 - [2026-10-01_14-50-23_all-cameras-h264-1080p.md](2026-10-01_14-50-23_all-cameras-h264-1080p.md) — all cameras H2641080p, UID-verified new IPs, app restarted
+
+- [2026-10-01_15-02-30_hevc-mac-address-recovery.md](2026-10-01_15-02-30_hevc-mac-address-recovery.md) — restoreHEVC, MAC identity discovery, reservedIP recovery verified

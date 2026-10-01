@@ -16,7 +16,7 @@ builder.Configuration.AddJsonFile(Path.Combine(paths.Data,"detection-tuning.json
 if(OperatingSystem.IsWindows())Console.WriteLine($"GimDVR running as {System.Security.Principal.WindowsIdentity.GetCurrent().Name}; pool={Environment.GetEnvironmentVariable("APP_POOL_ID")??"standalone"}");
 Directory.CreateDirectory(paths.Data);
 builder.Services.AddDataProtection().SetApplicationName("GimDvr").PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Data,"keys")));
-builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraClient>();
+builder.Services.AddSingleton<Store>();builder.Services.AddSingleton<CameraNetworkDiscovery>();builder.Services.AddSingleton<CameraClient>();
 builder.Services.AddSingleton<PtzService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<PtzService>());
 builder.Services.AddSingleton<MediaService>();builder.Services.AddHostedService(sp=>sp.GetRequiredService<MediaService>());
 builder.Services.AddHostedService<DetectionService>();
@@ -94,7 +94,7 @@ app.Use(async(ctx,next)=>
 var staticTypes=new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"]="application/vnd.android.package-archive";
 app.UseStaticFiles(new StaticFileOptions{ContentTypeProvider=staticTypes,OnPrepareResponse=ctx=>ctx.Context.Response.Headers.CacheControl="no-cache"});app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.UseWebSockets();
-app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.11.0"}));
+app.MapGet("/health",()=>Results.Ok(new{status="ok",app="GimDvr",version="1.11.1"}));
 app.MapPost("/api/login",async(LoginInput input,HttpContext ctx,Store store)=>
 {
     if(input.Username.Length>64)return Results.BadRequest(new{error="ข้อมูลไม่ถูกต้อง"});
@@ -118,7 +118,7 @@ app.MapPost("/api/password",(PasswordChange input,HttpContext ctx,Store store)=>
     var bootstrap=Path.Combine(paths.Data,"bootstrap.txt");if(user.Username=="admin"&&File.Exists(bootstrap))File.Delete(bootstrap);
     return Results.Ok();
 }).RequireAuthorization();
-object PublicCamera(Camera c,MediaService media)=>new{c.Id,c.Name,c.Driver,c.Host,c.HttpPort,c.RtspPort,c.RtspPath,c.Username,c.Uid,c.Enabled,c.RecordingEnabled,c.RecordingRoot,c.RetentionDays,c.Revision,c.TalkMode,status=media.Status(c.Id)};
+object PublicCamera(Camera c,MediaService media)=>new{c.Id,c.Name,c.Driver,c.Host,c.HttpPort,c.RtspPort,c.RtspPath,c.Username,c.Uid,c.MacAddress,c.Enabled,c.RecordingEnabled,c.RecordingRoot,c.RetentionDays,c.Revision,c.TalkMode,status=media.Status(c.Id)};
 app.MapGet("/api/cameras",(Store s,MediaService m)=>s.Cameras().Select(c=>PublicCamera(c,m))).RequireAuthorization();
 app.MapPost("/api/cameras",(CameraInput input,Store s,MediaService media,HttpContext ctx)=>
 {
