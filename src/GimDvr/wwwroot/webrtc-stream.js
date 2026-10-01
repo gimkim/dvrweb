@@ -1,6 +1,6 @@
 'use strict';
 
-// Shared web/Android player: H.265/H.264 WebRTC only; never start a fallback transport.
+// Shared web/Android player: H.264 WebRTC only; never start a fallback transport.
 function startLiveStream(video,id,onStatus){
  let stopped=false,active=null,retry=null,attempts=0;
  function connect(){
@@ -31,7 +31,7 @@ function startWebRtcAttempt(video,id,onStatus,onFailure){
    try{if('jitterBufferTarget' in receiver.receiver)receiver.receiver.jitterBufferTarget=400;}catch{}
    const codecs=typeof RTCRtpReceiver!=='undefined'?RTCRtpReceiver.getCapabilities('video')?.codecs:null;
    if(!codecs||!receiver.setCodecPreferences){failStream('unsupported-codec');return;}
-   if(codecs&&receiver.setCodecPreferences){const compatible=codecs.filter(c=>['video/h265','video/h264'].includes(c.mimeType.toLowerCase())).sort((a,b)=>Number(b.mimeType.toLowerCase()==='video/h265')-Number(a.mimeType.toLowerCase()==='video/h265'));if(!compatible.length){failStream('unsupported-codec');return;}receiver.setCodecPreferences(compatible);}
+   if(codecs&&receiver.setCodecPreferences){const compatible=codecs.filter(c=>c.mimeType.toLowerCase()==='video/h264');if(!compatible.length){failStream('unsupported-codec');return;}receiver.setCodecPreferences(compatible);}
    video.muted=true;video.playbackRate=1;video.dataset.transport='webrtc';
    peer.ontrack=e=>{if(stopped||failed)return;video.srcObject=new MediaStream([e.track]);frameRequest=video.requestVideoFrameCallback?.(()=>{if(stopped||failed)return;firstFrameMs=Date.now()-begin;lastFrameAt=Date.now();clearTimeout(timer);trace('first-frame');});video.play().catch(()=>{});};
    peer.onconnectionstatechange=()=>{trace('peer',peer.connectionState);if(peer.connectionState==='connected'){clearTimeout(timer);timer=setTimeout(()=>failStream('no-decoded-frames'),10000);}if(peer.connectionState==='failed'||peer.connectionState==='closed')failStream('peer-'+peer.connectionState);};
