@@ -167,3 +167,5 @@
 - [2026-10-01_15-02-30_hevc-mac-address-recovery.md](2026-10-01_15-02-30_hevc-mac-address-recovery.md) — restoreHEVC, MAC identity discovery, reservedIP recovery verified
 
 - [2026-10-01_15-08-17_recording-gap-and-ip-timeline.md](2026-10-01_15-08-17_recording-gap-and-ip-timeline.md) — actual recording gaps; DHCP change time not proven
+
+- [2026-10-01_15-10-26_unattended-recording-risk-review.md](2026-10-01_15-10-26_unattended-recording-risk-review.md) — unattended recording failure review and proposed watchdog/alerts
