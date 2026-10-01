@@ -169,3 +169,5 @@
 - [2026-10-01_15-08-17_recording-gap-and-ip-timeline.md](2026-10-01_15-08-17_recording-gap-and-ip-timeline.md) — actual recording gaps; DHCP change time not proven
 
 - [2026-10-01_15-10-26_unattended-recording-risk-review.md](2026-10-01_15-10-26_unattended-recording-risk-review.md) — unattended recording failure review and proposed watchdog/alerts
+
+- [2026-10-01_20-00-29_all-cameras-h264.md](2026-10-01_20-00-29_all-cameras-h264.md) — latest H2641080p choice; all3 source and completed recordings verified; shared player deployed

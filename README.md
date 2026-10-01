@@ -1,6 +1,6 @@
 # GimDVR
 
-Current1.11.1: all three cameras send H.265 at1920x1080. Live uses H.265/H.264 WebRTC without fMP4 fallback or video transcoding. Windows NAS recovers VStarcam IP changes using verified MAC/UID and LAN discovery, with MAC configurable in camera settings. Recordings copy original camera video; historical files remain unchanged.
+Current1.11.1 (2026-10-01 latest choice): all three cameras send H.264 at1920x1080. Live uses H.264 WebRTC without fMP4 fallback or video transcoding. Windows NAS recovers VStarcam IP changes using verified MAC/UID and LAN discovery, with MAC configurable in camera settings. Recordings copy original camera video; historical files remain unchanged.
 
 Live settings1.9.1: defaults150ms fMP4 fragments and300ms startup/rebuffer/live target. Admin can change each value in ระบบและกิจกรรม → ภาพสด · Buffer; SQLite persists settings for web and Android. Changing fragment duration restarts shared readers and may briefly interrupt recording; changing only buffers reconnects viewers. Historical100/200ms values below are superseded.
 
