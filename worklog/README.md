@@ -165,3 +165,5 @@
 - [2026-10-01_14-50-23_all-cameras-h264-1080p.md](2026-10-01_14-50-23_all-cameras-h264-1080p.md) — all cameras H2641080p, UID-verified new IPs, app restarted
 
 - [2026-10-01_15-02-30_hevc-mac-address-recovery.md](2026-10-01_15-02-30_hevc-mac-address-recovery.md) — restoreHEVC, MAC identity discovery, reservedIP recovery verified
+
+- [2026-10-01_15-08-17_recording-gap-and-ip-timeline.md](2026-10-01_15-08-17_recording-gap-and-ip-timeline.md) — actual recording gaps; DHCP change time not proven
