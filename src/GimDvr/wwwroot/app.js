@@ -48,7 +48,7 @@ function applyLiveLayout(id){
  cameras.filter(c=>c.id!==selected?.id&&!isViewing(c.id)).forEach(c=>{liveSessions.get(c.id)?.destroy();liveMessage(c.id,'');});
  if(selected){
   if(!liveSessions.has(selected.id))connectLive(selected,'focus').catch(e=>liveMessage(selected.id,e.message));
-  if(me.role!=='viewer'){document.querySelector('.single-camera .video-wrap').appendChild($('#controls'));showControls(selected);}
+  if(me.role!=='viewer'){document.querySelector('.single-camera .video-wrap').appendChild($('#controls'));}
  }
 }
 function liveMessage(id,text){const card=document.querySelector(`.camera-card[data-id="${id}"]`);if(card)card.querySelector('.video-status').textContent=text==='buffering'?'':text;}
@@ -73,7 +73,7 @@ async function connectLive(c,mode='overview'){
  hls=startLiveStream(video,c.id,message=>{if(active){if(message!=='buffering')video.dataset.starting='false';liveMessage(c.id,message);}});
  }catch(e){if(!active)return;session.destroy();throw e;}
 }
-window.onLiveFullscreenChanged=wrap=>{const wasOpen=$('#controls').open;closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));if(wasOpen&&page==='single'&&me?.role!=='viewer'){const c=cameras.find(c=>c.id===singleId);if(c)showControls(c);}};
+window.onLiveFullscreenChanged=wrap=>{closeFloatingControls();(wrap||(page==='single'?document.querySelector('.single-camera .video-wrap'):null)||document.body).appendChild($('#controls'));};
 window.gimDvrSuspend=()=>{stopLive();};
 window.gimDvrResume=()=>{if(me&&(page==='live'||page==='single')){stopLive();page==='single'?renderSingle():renderLive();}};
 

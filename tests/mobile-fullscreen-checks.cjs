@@ -14,4 +14,11 @@ const app=fs.readFileSync('src/GimDvr/wwwroot/app.js','utf8'),controls=fs.readFi
  const web=fixture();await web.full.onclick();assert.deepEqual(web.calls,['fullscreen','landscape']);web.win.exitLiveFullscreen();assert.ok(web.calls.includes('unlock'));assert.ok(web.calls.includes('exit'));console.log('PASS browser requests landscape after fullscreen and unlocks on exit');
  const denied=fixture(false,true);await denied.full.onclick();assert.equal(denied.doc.fullscreenElement,denied.wrap);assert.equal(denied.full.title,'หมุนอุปกรณ์เป็นแนวนอน');console.log('PASS unsupported orientation lock preserves fullscreen with manual-rotation hint');
  const native=fixture(true);await native.full.onclick();assert.ok(native.calls.includes('native-landscape'));assert.ok(!native.calls.includes('fullscreen'));native.win.exitLiveFullscreen();assert.ok(native.calls.includes('native-portrait'));console.log('PASS Android uses existing native landscape/fullscreen bridge and restores portrait');
+ const panel={open:true},hosts=[],singleWrap={appendChild:p=>hosts.push(['single',p])},fullWrap={appendChild:p=>hosts.push(['full',p])};let opens=0,closes=0;
+ const panelCtx=vm.createContext({window:{},page:'single',me:{role:'operator'},singleId:'a',cameras:[{id:'a'}],$:()=>panel,closeFloatingControls(){closes++;panel.open=false;},showControls(){opens++;panel.open=true;},document:{body:{appendChild:p=>hosts.push(['body',p])},querySelector:()=>singleWrap}});
+ vm.runInContext(app.slice(app.indexOf('window.onLiveFullscreenChanged='),app.indexOf('window.gimDvrSuspend=')),panelCtx);
+ panelCtx.window.onLiveFullscreenChanged(fullWrap);assert.equal(panel.open,false);assert.equal(hosts.at(-1)[0],'full');assert.equal(opens,0);
+ panelCtx.showControls();assert.equal(panel.open,true);assert.equal(opens,1);
+ panelCtx.window.onLiveFullscreenChanged(null);assert.equal(panel.open,false);assert.equal(hosts.at(-1)[0],'single');assert.equal(opens,1);assert.equal(closes,2);
+ console.log('PASS fullscreen transitions close existing controls; explicit control action still opens them');
 })().catch(e=>{console.error(e);process.exitCode=1;});
